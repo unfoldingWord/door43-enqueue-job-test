@@ -4,16 +4,16 @@ services:
   proxy:
     image: "nginx:latest"
     volumes:
-      - ./proxy/nginx.conf:/etc/nginx/conf.d/mysite.template:ro
+      - ./proxyConf/nginx.conf:/etc/nginx/conf.d/mysite.template:ro
     ports:
       - "${LISTEN_IP:-127.0.0.1}:8080:80"
     environment:
       - ALLOWED_IPS=${ALLOWED_IPS:-0.0.0.0/0}
-    command: /bin/bash -c "envsubst '$$ALLOWED_IPS' < /etc/nginx/conf.d/mysite.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+    command: /bin/sh -c "envsubst '$$ALLOWED_IPS' < /etc/nginx/conf.d/mysite.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
     depends_on:
-      - listen
-  listen:
-    build: ./listen
+      - enqueue
+  enqueue:
+    build: ./enqueue
     depends_on:
       - redis
   redis:
