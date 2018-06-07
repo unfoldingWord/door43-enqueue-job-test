@@ -44,9 +44,9 @@ def show():
        keys_output_string += '<p>' + key.decode() + '</p>\n'
     q = Queue(OUR_NAME, connection=StrictRedis(host=redis_url))
     queue_output_string = ''
-    queue_output_string += '<p>Job IDs: {}</p>'.format(q.job_ids)
-    queue_output_string += '<p>Jobs: {}</p>'.format(q.jobs)
-    return 'This {0} webhook service has <h1>{1} keys:</h1>{2} <h1>queues:</h1>{3}'.format(OUR_NAME, len(r.keys()), keys_output_string, queue_output_string)
+    queue_output_string += '<p>Job IDs ({0}): {1}</p>'.format(len(q.job_ids), q.job_ids)
+    queue_output_string += '<p>Jobs ({0}): {1}</p>'.format(len(q.jobs), q.jobs)
+    return 'This {0} webhook service has <h1>Keys ({1}):</h1>{2} <h1>Queue:</h1>{3}'.format(OUR_NAME, len(r.keys()), keys_output_string, queue_output_string)
 
 
 @app.route('/'+WEBHOOK_URL_SEGMENT, methods=['POST'])
@@ -55,19 +55,18 @@ def receiver():
     Accepts POST requests and checks the (json) payload
 
     Queues approved jobs at redis instance at global redis_url.
+    Queue name is OUR_NAME.
     """
     if request.method == 'POST':
         response_ok, data_dict = check_posted_payload(request) # data_dict is json payload if successful, else error info
         if response_ok:
             # Get the redis URL from the environment, otherwise use a test instance
             redis_url = getenv('REDIS_URL','redis')
-            # TODO: Check if it's sensible to specify a queue name here
-            #           (wasn't in original -- may interfere with worker later???)
             q = Queue(OUR_NAME, connection=StrictRedis(host=redis_url))
             q.enqueue('webhook.job', data_dict) # A function named webhook.job will be called by the worker
             return '{0} queued valid job at {1}'.format(OUR_NAME,datetime.utcnow())
         else:
-            # TODO: Check if we also need to log these errors (in data_dict)?
+            # TODO: Check if we also need to log these errors (in data_dict) somewhere?
             #           -- they could signal either a caller fault or an attack
             return '{0} ignored invalid payload with {1}'.format(OUR_NAME, data_dict)
     else: # should never happen

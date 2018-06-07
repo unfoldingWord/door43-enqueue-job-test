@@ -42,3 +42,8 @@ To run jobs using the webhooks as input:
 
 See the [CVMFS-to-Docker converter](https://github.com/lscsoft/cvmfs-docker-worker)
 for a real world example.
+
+## Door43
+
+Modified June by RJH 2018 mainly to add some vetting of the json payload from DCS
+before the job is added to the redis queue.

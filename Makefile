@@ -23,7 +23,18 @@ run:
 	#   and then connect at 127.0.0.1:5000/client/webhook/
 	python enqueue/enqueueMain.py
 
-compose:
+compose1:
 	# This runs the enqueue and redis processes via nginx/gunicorn
 	#   and then connect at 127.0.0.1:8080/client/webhook/
-	docker-compose up
+	#   and "rq worker -c settings1" can connect to redis at 127.0.0.1:6379
+	docker-compose -f docker-compose1.yaml build
+	docker-compose -f docker-compose1.yaml up
+
+worker1:
+	cd processQueue && rq worker -c settings1
+
+compose2:
+	# This runs the enqueue, processQueue, and redis processes via nginx/gunicorn
+	#   and then connect at 127.0.0.1:8080/client/webhook/
+	docker-compose -f docker-compose2.yaml build
+	docker-compose -f docker-compose2.yaml up
