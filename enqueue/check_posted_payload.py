@@ -1,4 +1,4 @@
-# This code adapted by RJH June 2018 from tx-manager/client_webhook
+# This code adapted by RJH June 2018 from tx-manager/client_webhook/ClientWebhookHandler
 
 GOGS_URL = 'https://git.door43.org'
 

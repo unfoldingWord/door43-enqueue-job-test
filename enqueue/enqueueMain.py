@@ -1,5 +1,7 @@
 # Adapted by RJH June 2018 from fork of https://github.com/lscsoft/webhook-queue (Public Domain / unlicense.org)
-#   The main change was to add some vetting of the json payload before deciding to queue the job.
+#   The main change was to add some vetting of the json payload before allowing the job to be queued.
+
+# TODO: Add Graphite Gauge metrics for queued jobs -- see metrics repository for examples of use
 
 # Python imports
 from os import getenv
@@ -14,8 +16,7 @@ from datetime import datetime
 from check_posted_payload import check_posted_payload
 
 OUR_NAME = 'Door43'
-# TODO: Check whether the DCS webhook calls include the trailing slash or not
-WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that Flask requires the trailing slash when connecting, but nginx/gunicorn redirects with 301
+WEBHOOK_URL_SEGMENT = 'client/webhook' # Note that there is no trailing slash
 
 
 app = Flask(__name__)
@@ -28,9 +29,8 @@ def index():
     """
     return 'This {0} webhook service runs from {1}{2}'.format(OUR_NAME, request.url, WEBHOOK_URL_SEGMENT)
 
-
 # This code is for debugging only and can be removed
-@app.route('/showDB/', methods=['GET'])
+@app.route('/showDB', methods=['GET'])
 def show():
     """
     Display a helpful list to a user connecting to our debug URL.
@@ -68,7 +68,7 @@ def receiver():
         else:
             # TODO: Check if we also need to log these errors (in data_dict) somewhere?
             #           -- they could signal either a caller fault or an attack
-            return '{0} ignored invalid payload with {1}'.format(OUR_NAME, data_dict)
+            return '{0} ignored invalid payload with {1}'.format(OUR_NAME, data_dict), 400
     else: # should never happen
         return 'This is a {0} webhook receiver only.'.format(OUR_NAME)
 
