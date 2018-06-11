@@ -1,4 +1,4 @@
-print("settings1.py got loaded")
+print("settings_enqueue.py got loaded")
 
 REDIS_URL = 'redis://127.0.0.1:6379'
 # You can also specify the Redis DB to use

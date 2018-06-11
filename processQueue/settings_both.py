@@ -1,4 +1,4 @@
-print("settings2.py got loaded")
+print("settings_both.py got loaded")
 
 REDIS_URL = 'redis://0.0.0.0:6379'
 # You can also specify the Redis DB to use
