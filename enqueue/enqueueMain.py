@@ -16,10 +16,11 @@ from datetime import datetime
 from check_posted_payload import check_posted_payload
 
 OUR_NAME = 'Door43'
-WEBHOOK_URL_SEGMENT = 'client/webhook' # Note that there is no trailing slash
+WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
 
 
 app = Flask(__name__)
+
 
 # This code should never be executed in the real world and presumably can be removed
 @app.route('/', methods=['GET'])
@@ -28,29 +29,39 @@ def index():
     Display a helpful message to a user connecting to our root URL.
     """
     return 'This {0} webhook service runs from {1}{2}'.format(OUR_NAME, request.url, WEBHOOK_URL_SEGMENT)
+# end of index()
+
 
 # This code is for debugging only and can be removed
-@app.route('/showDB', methods=['GET'])
+@app.route('/showDB/', methods=['GET'])
 def show():
     """
-    Display a helpful list to a user connecting to our debug URL.
+    Display a helpful status list to a user connecting to our debug URL.
     """
     redis_url = getenv('REDIS_URL','redis')
     r = StrictRedis(host=redis_url)
+    result_string = 'This webhook service has'
+
+    # Look at the queues
+    for queue_name in (OUR_NAME, 'failed'):
+        q = Queue(queue_name, connection=StrictRedis(host=redis_url))
+        queue_output_string = ''
+        #queue_output_string += '<p>Job IDs ({0}): {1}</p>'.format(len(q.job_ids), q.job_ids)
+        queue_output_string += '<p>Jobs ({0}): {1}</p>'.format(len(q.jobs), q.jobs)
+        result_string += '<h1>{0} queue:</h1>{1}'.format(queue_name, queue_output_string)
+
     # Look at the raw keys
     keys_output_string = ''
     for key in r.scan_iter():
-       print(key)
        keys_output_string += '<p>' + key.decode() + '</p>\n'
-    q = Queue(OUR_NAME, connection=StrictRedis(host=redis_url))
-    queue_output_string = ''
-    queue_output_string += '<p>Job IDs ({0}): {1}</p>'.format(len(q.job_ids), q.job_ids)
-    queue_output_string += '<p>Jobs ({0}): {1}</p>'.format(len(q.jobs), q.jobs)
-    return 'This {0} webhook service has <h1>Keys ({1}):</h1>{2} <h1>Queue:</h1>{3}'.format(OUR_NAME, len(r.keys()), keys_output_string, queue_output_string)
+    result_string += '<h1>All keys ({0}):</h1>{1}'.format(len(r.keys()), keys_output_string )
+
+    return result_string
+# end of show()
 
 
 @app.route('/'+WEBHOOK_URL_SEGMENT, methods=['POST'])
-def receiver():
+def job_receiver():
     """
     Accepts POST requests and checks the (json) payload
 
@@ -63,15 +74,22 @@ def receiver():
             # Get the redis URL from the environment, otherwise use a test instance
             redis_url = getenv('REDIS_URL','redis')
             q = Queue(OUR_NAME, connection=StrictRedis(host=redis_url))
-            q.enqueue('webhook.job', data_dict) # A function named webhook.job will be called by the worker
-            return '{0} queued valid job at {1}'.format(OUR_NAME,datetime.utcnow())
+            failed_q = Queue('failed', connection=StrictRedis(host=redis_url))
+            # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
+            #       The timeout value determines the max run time of the worker once the job is accessed
+            q.enqueue('webhook.job', data_dict, timeout='120s') # A function named webhook.job will be called by the worker
+            # NOTE: The above line can return a result from the webhook.job function
+            #   By default, the result remains available for 500s
+            return '{0} queued valid job ({1} jobs now, {2} failed jobs) at {3}'.format(OUR_NAME, len(q), len(failed_q), datetime.utcnow())
         else:
             # TODO: Check if we also need to log these errors (in data_dict) somewhere?
             #           -- they could signal either a caller fault or an attack
             return '{0} ignored invalid payload with {1}'.format(OUR_NAME, data_dict), 400
     else: # should never happen
         return 'This is a {0} webhook receiver only.'.format(OUR_NAME)
+# end of job_receiver()
+
 
 if __name__ == '__main__':
-    debug_flag = getenv('DEBUG_MODE',False)
+    debug_flag = getenv('DEBUG_MODE',False) # Gets (optional) DEBUG_MODE environment variable
     app.run(debug=debug_flag)
