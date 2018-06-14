@@ -15,13 +15,17 @@ from datetime import datetime
 #Local imports
 from check_posted_payload import check_posted_payload
 
-OUR_NAME = 'Door43'
+OUR_NAME = 'DCS_webhook' # Becomes the queue name -- must match setup.py in door43-job-handler
 WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
 
 prefix = getenv('QUEUE_PREFIX','') # Gets (optional) QUEUE_PREFIX environment variable -- set to 'dev-' for development
 queue_name = prefix + OUR_NAME
 
+# Look at relevant environment variables
 debug_flag = getenv('DEBUG_MODE',False) # Gets (optional) DEBUG_MODE environment variable
+# Get the redis URL from the environment, otherwise use a test instance
+redis_url = getenv('REDIS_URL','redis')
+
 
 
 app = Flask(__name__)
@@ -43,7 +47,6 @@ def show():
     """
     Display a helpful status list to a user connecting to our debug URL.
     """
-    redis_url = getenv('REDIS_URL','redis')
     r = StrictRedis(host=redis_url)
     result_string = 'This {0} webhook enqueuing service has:'.format(OUR_NAME)
 
@@ -55,7 +58,7 @@ def show():
 
     # Look at the queues
     for this_queue_name in (OUR_NAME, 'dev-'+OUR_NAME, 'failed'):
-        q = Queue(this_queue_name, connection=StrictRedis(host=redis_url))
+        q = Queue(this_queue_name, connection=r)
         queue_output_string = ''
         #queue_output_string += '<p>Job IDs ({0}): {1}</p>'.format(len(q.job_ids), q.job_ids)
         queue_output_string += '<p>Jobs ({0}): {1}</p>'.format(len(q.jobs), q.jobs)
@@ -82,10 +85,9 @@ def job_receiver():
     if request.method == 'POST':
         response_ok, data_dict = check_posted_payload(request) # data_dict is json payload if successful, else error info
         if response_ok:
-            # Get the redis URL from the environment, otherwise use a test instance
-            redis_url = getenv('REDIS_URL','redis')
-            q = Queue(queue_name, connection=StrictRedis(host=redis_url))
-            failed_q = Queue('failed', connection=StrictRedis(host=redis_url))
+            r = StrictRedis(host=redis_url)
+            q = Queue(queue_name, connection=r)
+            failed_q = Queue('failed', connection=r)
             # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
             #       The timeout value determines the max run time of the worker once the job is accessed
             q.enqueue('webhook.job', data_dict, timeout='120s') # A function named webhook.job will be called by the worker
