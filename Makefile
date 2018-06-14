@@ -26,14 +26,15 @@ run:
 composeEnqueue:
 	# This runs the enqueue and redis processes via nginx/gunicorn
 	#   and then connect at 127.0.0.1:8080/client/webhook
-	#   and "rq worker -c settings1" can connect to redis at 127.0.0.1:6379
+	#   and "rq worker --config settings_enqueue" can connect to redis at 127.0.0.1:6379
 	docker-compose -f docker-compose-enqueue.yaml build
 	docker-compose -f docker-compose-enqueue.yaml up
 
 processWorker:
-	cd processQueue && rq worker -c settings_enqueue
+	cd processQueue && rq worker --config settings_enqueue
 
 composeBoth:
+	# NOTE: Didn't get this working -- processQueue couldn't connect to internal redis instance
 	# This runs the enqueue, processQueue, and redis processes via nginx/gunicorn
 	#   and then connect at 127.0.0.1:8080/client/webhook
 	docker-compose -f docker-compose-both.yaml build
