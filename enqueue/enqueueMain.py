@@ -1,8 +1,6 @@
 # Adapted by RJH June 2018 from fork of https://github.com/lscsoft/webhook-queue (Public Domain / unlicense.org)
 #   The main change was to add some vetting of the json payload before allowing the job to be queued.
 
-# TODO: Add Graphite Gauge metrics for queued jobs -- see metrics repository for examples of use
-
 # Python imports
 from os import getenv
 
@@ -11,11 +9,12 @@ from flask import Flask, request
 from redis import StrictRedis
 from rq import Queue
 from datetime import datetime
+from statsd import StatsClient # Graphite front-end
 
 #Local imports
 from check_posted_payload import check_posted_payload
 
-OUR_NAME = 'DCS_webhook' # Becomes the queue name -- must match setup.py in door43-job-handler
+OUR_NAME = 'DCS_webhook' # Becomes the (perhaps prefixed) queue name -- must match setup.py in door43-job-handler
 WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
 
 prefix = getenv('QUEUE_PREFIX','') # Gets (optional) QUEUE_PREFIX environment variable -- set to 'dev-' for development
@@ -29,6 +28,7 @@ redis_url = getenv('REDIS_URL','redis')
 
 
 app = Flask(__name__)
+stats = StatsClient('localhost', port=8125, prefix=OUR_NAME)
 
 
 # This code should never be executed in the real world and presumably can be removed
@@ -83,11 +83,17 @@ def job_receiver():
     Queue name is queue_name.
     """
     if request.method == 'POST':
+        stats.incr('TotalPostsReceived')
         response_ok, data_dict = check_posted_payload(request) # data_dict is json payload if successful, else error info
         if response_ok:
+            stats.incr('GoodPostsReceived')
             r = StrictRedis(host=redis_url)
             q = Queue(queue_name, connection=r)
+            len_q = len(q)
+            stats.gauge(prefix+'QueueLength', len_q)
             failed_q = Queue('failed', connection=r)
+            len_failed_q = len(failed_q)
+            stats.gauge('FailedQueueLength', len_failed_q)
             # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
             #       The timeout value determines the max run time of the worker once the job is accessed
             q.enqueue('webhook.job', data_dict, timeout='120s') # A function named webhook.job will be called by the worker
@@ -97,11 +103,12 @@ def job_receiver():
                 other_queue_name = OUR_NAME if prefix else 'dev-'+OUR_NAME
                 other_q = Queue(other_queue_name, connection=StrictRedis(host=redis_url))
                 return '{0} queued valid job to {1} ({2} jobs now, {3} jobs in {4} queue, {5} failed jobs) at {6}' \
-                    .format(OUR_NAME, queue_name, len(q), len(other_q), other_queue_name, len(failed_q), datetime.utcnow())
+                    .format(OUR_NAME, queue_name, len(q), len(other_q), other_queue_name, len_failed_q, datetime.utcnow())
             else: #production mode
                 return '{0} queued valid job to {1} ({2} jobs now, {3} failed jobs) at {4}' \
-                    .format(OUR_NAME, queue_name, len(q), len(failed_q), datetime.utcnow())
+                    .format(OUR_NAME, queue_name, len(q), len_failed_q, datetime.utcnow())
         else:
+            stats.incr('InvalidPostsReceived')
             # TODO: Check if we also need to log these errors (in data_dict) somewhere?
             #           -- they could signal either a caller fault or an attack
             return '{0} ignored invalid payload with {1}'.format(OUR_NAME, data_dict), 400
