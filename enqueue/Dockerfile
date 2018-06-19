@@ -12,10 +12,11 @@ EXPOSE 8000
 # Define environment variables
 ENV QUEUE_PREFIX dev-
 ENV DEBUG_MODE True
-
+ENV GRAPHITE_URL dash.door43.org
 # NOTE: The following environment variables can be set:
 #	QUEUE_PREFIX dev- (optional -- defaults to empty string)
 #	DEBUG_MODE True (optional -- defaults to False)
 #   REDIS_URL (optional -- defaults to 'redis')
+#   GRAPHITE_URL (optional -- defaults to 'localhost')
 
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "enqueueMain:app"]
