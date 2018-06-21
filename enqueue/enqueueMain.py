@@ -43,7 +43,7 @@ def index():
     """
     Display a helpful message to a user connecting to our root URL.
     """
-    return 'This {0} webhook service runs from {1}{2}'.format(OUR_NAME, request.url, WEBHOOK_URL_SEGMENT)
+    return f'This {OUR_NAME} webhook service runs from {request.url}{WEBHOOK_URL_SEGMENT}'
 # end of index()
 
 
@@ -54,27 +54,27 @@ def show():
     Display a helpful status list to a user connecting to our debug URL.
     """
     r = StrictRedis(host=redis_url)
-    result_string = 'This {0} webhook enqueuing service has:'.format(OUR_NAME)
+    result_string = f'This {OUR_NAME} webhook enqueuing service has:'
 
     # Look at environment variables
     result_string += '<h1>Environment Variables</h1>'
-    result_string += '<p>QUEUE_PREFIX={0}</p>'.format(getenv('QUEUE_PREFIX', ''))
-    result_string += '<p>DEBUG_MODE={0}</p>'.format(getenv('DEBUG_MODE', False))
-    result_string += '<p>REDIS_URL={0}</p>'.format(getenv('REDIS_URL', 'redis'))
+    result_string += f"<p>QUEUE_PREFIX={getenv('QUEUE_PREFIX', '')}</p>"
+    result_string += f"<p>DEBUG_MODE={getenv('DEBUG_MODE', False)}</p>"
+    result_string += f"<p>REDIS_URL={getenv('REDIS_URL', 'redis')}</p>"
 
     # Look at the queues
     for this_queue_name in (OUR_NAME, 'dev-'+OUR_NAME, 'failed'):
         q = Queue(this_queue_name, connection=r)
         queue_output_string = ''
         #queue_output_string += '<p>Job IDs ({0}): {1}</p>'.format(len(q.job_ids), q.job_ids)
-        queue_output_string += '<p>Jobs ({0}): {1}</p>'.format(len(q.jobs), q.jobs)
-        result_string += '<h1>{0} queue:</h1>{1}'.format(this_queue_name, queue_output_string)
+        queue_output_string += f'<p>Jobs ({len(q.jobs)}): {q.jobs}</p>'
+        result_string += f'<h1>{this_queue_name} queue:</h1>{queue_output_string}'
 
     # Look at the raw keys
     keys_output_string = ''
     for key in r.scan_iter():
        keys_output_string += '<p>' + key.decode() + '</p>\n'
-    result_string += '<h1>All keys ({0}):</h1>{1}'.format(len(r.keys()), keys_output_string )
+    result_string += f'<h1>All keys ({len(r.keys())}):</h1>{keys_output_string}'
 
     return result_string
 # end of show()
@@ -108,18 +108,16 @@ def job_receiver():
             if prefix or debug_flag:
                 other_queue_name = OUR_NAME if prefix else 'dev-'+OUR_NAME
                 other_q = Queue(other_queue_name, connection=StrictRedis(host=redis_url))
-                return '{0} queued valid job to {1} ({2} jobs now, {3} jobs in {4} queue, {5} failed jobs) at {6}' \
-                    .format(OUR_NAME, queue_name, len(q), len(other_q), other_queue_name, len_failed_q, datetime.utcnow())
+                return f'{OUR_NAME} queued valid job to {queue_name} ({len(q)} jobs now, {len(other_q)} jobs in {other_queue_name} queue, {len_failed_q} failed jobs) at {datetime.utcnow()}'
             else: #production mode
-                return '{0} queued valid job to {1} ({2} jobs now, {3} failed jobs) at {4}' \
-                    .format(OUR_NAME, queue_name, len(q), len_failed_q, datetime.utcnow())
+                return f'{OUR_NAME} queued valid job to {queue_name} ({len(q)} jobs now, {len_failed_q} failed jobs) at {datetime.utcnow()}'
         else:
             stats_client.incr('InvalidPostsReceived')
             # TODO: Check if we also need to log these errors (in data_dict) somewhere?
             #           -- they could signal either a caller fault or an attack
-            return '{0} ignored invalid payload with {1}'.format(OUR_NAME, data_dict), 400
+            return f'{OUR_NAME} ignored invalid payload with {data_dict}', 400
     else: # should never happen
-        return 'This is a {0} webhook receiver only.'.format(OUR_NAME)
+        return f'This is a {OUR_NAME} webhook receiver only.'
 # end of job_receiver()
 
 

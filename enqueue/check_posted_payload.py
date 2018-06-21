@@ -31,7 +31,7 @@ def check_posted_payload(request):
 
     # Bail if the URL to the repo is invalid
     if not payload_json['repository']['html_url'].startswith(GOGS_URL):
-        return False, {'error': 'The repo does not belong to {0}.'.format(GOGS_URL)}
+        return False, {'error': f'The repo does not belong to {GOGS_URL}.'}
 
     # Bail if the commit branch is not the default branch
     try:
@@ -41,7 +41,7 @@ def check_posted_payload(request):
     except KeyError:
         return False, {'error': 'This does not appear to be a push, exiting.'}
     if commit_branch != payload_json['repository']['default_branch']:
-        return False, {'error': 'Commit branch: {0} is not the default branch.'.format(commit_branch)}
+        return False, {'error': f'Commit branch: {commit_branch} is not the default branch.'}
 
     # TODO: Check why this code was commented out in tx-manager -- if it's not necessary let's delete it
     # Check that the user token is valid

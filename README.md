@@ -6,7 +6,7 @@ develop:
 [![Build Status](https://travis-ci.org/unfoldingWord-dev/d43-catalog.svg?branch=develop)](https://travis-ci.org/unfoldingWord-dev/d43-catalog)
 [![Coverage Status](https://coveralls.io/repos/github/unfoldingWord-dev/d43-catalog/badge.svg?branch=develop)](https://coveralls.io/github/unfoldingWord-dev/d43-catalog?branch=develop)
 
-# Door43-Enqueue-Job
+# Door43-Enqueue-Job (part of tX translationConverter platform)
 
 See [here](https://forum.ccbt.bible/t/door43-org-tx-development-architecture/65)
 for a diagram of the overall flow of the tx (translationConverter) platform.
