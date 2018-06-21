@@ -2,6 +2,7 @@
 #   The main change was to add some vetting of the json payload before allowing the job to be queued.
 
 # TODO: Needs to be tested with the actual AWS redis instance
+# TODO: Still haven't figured out how to view stats
 
 # Python imports
 from os import getenv
@@ -16,16 +17,16 @@ from statsd import StatsClient # Graphite front-end
 # Local imports
 from check_posted_payload import check_posted_payload
 
-OUR_NAME = 'DCS_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
+OUR_NAME = 'Door43_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
 WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
 
-prefix = getenv('QUEUE_PREFIX','') # Gets (optional) QUEUE_PREFIX environment variable -- set to 'dev-' for development
+prefix = getenv('QUEUE_PREFIX', '') # Gets (optional) QUEUE_PREFIX environment variable -- set to 'dev-' for development
 queue_name = prefix + OUR_NAME
 
 # Look at relevant environment variables
-debug_flag = getenv('DEBUG_MODE',False) # Gets (optional) DEBUG_MODE environment variable
+debug_flag = getenv('DEBUG_MODE', False) # Gets (optional) DEBUG_MODE environment variable
 # Get the redis URL from the environment, otherwise use a local test instance
-redis_url = getenv('REDIS_URL','redis')
+redis_url = getenv('REDIS_URL', 'redis')
 
 # Get the Graphite URL from the environment, otherwise use a local test instance
 graphite_url = getenv('GRAPHITE_URL','localhost')
@@ -57,9 +58,9 @@ def show():
 
     # Look at environment variables
     result_string += '<h1>Environment Variables</h1>'
-    result_string += '<p>QUEUE_PREFIX={0}</p>'.format(getenv('QUEUE_PREFIX',''))
-    result_string += '<p>DEBUG_MODE={0}</p>'.format(getenv('DEBUG_MODE',False))
-    result_string += '<p>REDIS_URL={0}</p>'.format(getenv('REDIS_URL','redis'))
+    result_string += '<p>QUEUE_PREFIX={0}</p>'.format(getenv('QUEUE_PREFIX', ''))
+    result_string += '<p>DEBUG_MODE={0}</p>'.format(getenv('DEBUG_MODE', False))
+    result_string += '<p>REDIS_URL={0}</p>'.format(getenv('REDIS_URL', 'redis'))
 
     # Look at the queues
     for this_queue_name in (OUR_NAME, 'dev-'+OUR_NAME, 'failed'):

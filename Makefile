@@ -13,6 +13,7 @@ dependencies:
 
 # NOTE: The following optional environment variables can be set:
 #	REDIS_URL (can be omitted for testing to use a local instance)
+#	GRAPHITE_URL (defaults to localhost if missing)
 #	QUEUE_PREFIX (set to dev- for testing)
 #	DEBUG_MODE (can be set to any non-blank string to run in debug mode for testing)
 

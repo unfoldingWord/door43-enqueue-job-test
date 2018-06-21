@@ -1,3 +1,54 @@
+master:
+[![Build Status](https://travis-ci.org/unfoldingWord-dev/door43-enqueue-job.svg?branch=master)](https://travis-ci.org/unfoldingWord-dev/d43-catalog)
+[![Coverage Status](https://coveralls.io/repos/github/unfoldingWord-dev/d43-catalog/badge.svg?branch=master)](https://coveralls.io/github/unfoldingWord-dev/d43-catalog?branch=master)
+
+develop:
+[![Build Status](https://travis-ci.org/unfoldingWord-dev/d43-catalog.svg?branch=develop)](https://travis-ci.org/unfoldingWord-dev/d43-catalog)
+[![Coverage Status](https://coveralls.io/repos/github/unfoldingWord-dev/d43-catalog/badge.svg?branch=develop)](https://coveralls.io/github/unfoldingWord-dev/d43-catalog?branch=develop)
+
+# Door43-Enqueue-Job
+
+See [here](https://forum.ccbt.bible/t/door43-org-tx-development-architecture/65)
+for a diagram of the overall flow of the tx (translationConverter) platform.
+
+That is more up-to-date than the write-up of the previous platform
+[here](https://github.com/unfoldingWord-dev/door43.org/wiki/tX-Development-Architecture)
+(which was too dependant on expensive AWS lambda functions).
+
+
+## Door43 modifications
+
+Modified June by RJH 2018 mainly to add vetting of the json payload from DCS
+before the job is added to the redis queue.
+
+Also added Graphite stats collection.
+
+See the `Makefile` for a list of environment variables which are looked for.
+
+To setup:
+    python3 -m venv venv
+    source venv/bin/activate
+    make dependencies
+
+To run:
+    make composeEnqueue
+
+Basically this small program collects the json payload from the DCS (Door43
+Content Service) which connects to the .../client/webhook/ URL. (Notice the
+trailing slash.)
+
+This enqueue process checks for various fields for simple validation of the
+payload, and then puts the job onto a (rq) queue (stored in redis) to be
+processed.
+
+The next part in the Door43 workflow can be found in the door43-job-handler
+repo. The job handler contains `webhook.py` (see below) which removes jobs
+from the queue and then processes them -- added them back to a `failed` queue
+if they give an exception or time-out. Note that the queue name here in
+`enqueueMain.py` must match the one in the job-handler `rq_settings.py`.
+
+
+# The following is the initial (forked) README
 # Webhook job queue
 The webhook job queue is designed to receive notifications from services and
 store the JSON as a dictionary in a `python-rq` redis queue. It is designed
@@ -42,18 +93,3 @@ To run jobs using the webhooks as input:
 
 See the [CVMFS-to-Docker converter](https://github.com/lscsoft/cvmfs-docker-worker)
 for a real world example.
-
-## Door43 modifications
-
-Modified June by RJH 2018 mainly to add vetting of the json payload from DCS
-before the job is added to the redis queue.
-
-Also reads environment variables for debug mode and to use dev- queue.
-
-To setup:
-    python3 -m venv venv
-    source venv/bin/activate
-    make dependencies
-
-To run:
-    make composeEnqueue
