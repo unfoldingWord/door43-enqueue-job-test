@@ -3,8 +3,8 @@ from unittest.mock import Mock
 
 from enqueue.check_posted_payload import check_posted_payload
 
-class TestRootURL(TestCase):
 
+class TestPayloadCheck(TestCase):
 
     def test_blank(self):
         payload_json = ''
@@ -99,10 +99,10 @@ class TestRootURL(TestCase):
     def test_bad_commit_branch(self):
         headers = {'X-Gogs-Event':'push'}
         payload_json = {
+            'ref':None,
             'repository':{
                 'html_url':'https://git.door43.org/whatever',
                 },
-            'ref':None
             }
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers
@@ -116,10 +116,10 @@ class TestRootURL(TestCase):
     def test_missing_default_branch(self):
         headers = {'X-Gogs-Event':'push'}
         payload_json = {
+            'ref':'refs/heads/master',
             'repository':{
                 'html_url':'https://git.door43.org/whatever',
                 },
-            'ref':'refs/heads/master'
             }
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers
@@ -133,11 +133,11 @@ class TestRootURL(TestCase):
     def test_wrong_commit_branch(self):
         headers = {'X-Gogs-Event':'push'}
         payload_json = {
+            'ref':'refs/heads/notMaster',
             'repository':{
                 'html_url':'https://git.door43.org/whatever',
                 'default_branch':'master',
                 },
-            'ref':'refs/heads/notMaster'
             }
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers
@@ -151,11 +151,11 @@ class TestRootURL(TestCase):
     def test_success(self):
         headers = {'X-Gogs-Event':'push'}
         payload_json = {
+            'ref':'refs/heads/master',
             'repository':{
                 'html_url':'https://git.door43.org/whatever',
                 'default_branch':'master',
                 },
-            'ref':'refs/heads/master'
             }
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers

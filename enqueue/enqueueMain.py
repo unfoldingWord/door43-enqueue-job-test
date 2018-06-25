@@ -20,11 +20,11 @@ from check_posted_payload import check_posted_payload
 OUR_NAME = 'Door43_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
 WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
 
+
+# Look at relevant environment variables
 prefix = getenv('QUEUE_PREFIX', '') # Gets (optional) QUEUE_PREFIX environment variable -- set to 'dev-' for development
 queue_name = prefix + OUR_NAME
 
-# Look at relevant environment variables
-debug_flag = getenv('DEBUG_MODE', False) # Gets (optional) DEBUG_MODE environment variable
 # Get the redis URL from the environment, otherwise use a local test instance
 redis_url = getenv('REDIS_URL', 'redis')
 
@@ -49,7 +49,7 @@ def index():
 
 # This code is for debugging only and can be removed
 @app.route('/showDB/', methods=['GET'])
-def show():
+def showDB():
     """
     Display a helpful status list to a user connecting to our debug URL.
     """
@@ -77,7 +77,7 @@ def show():
     result_string += f'<h1>All keys ({len(r.keys())}):</h1>{keys_output_string}'
 
     return result_string
-# end of show()
+# end of showDB()
 
 
 @app.route('/'+WEBHOOK_URL_SEGMENT, methods=['POST'])
@@ -105,7 +105,7 @@ def job_receiver():
             q.enqueue('webhook.job', data_dict, timeout='120s') # A function named webhook.job will be called by the worker
             # NOTE: The above line can return a result from the webhook.job function
             #   By default, the result remains available for 500s
-            if prefix or debug_flag:
+            if prefix:
                 other_queue_name = OUR_NAME if prefix else 'dev-'+OUR_NAME
                 other_q = Queue(other_queue_name, connection=StrictRedis(host=redis_url))
                 return f'{OUR_NAME} queued valid job to {queue_name} ({len(q)} jobs now, {len(other_q)} jobs in {other_queue_name} queue, {len_failed_q} failed jobs) at {datetime.utcnow()}'
@@ -122,5 +122,4 @@ def job_receiver():
 
 
 if __name__ == '__main__':
-    if debug_flag: print("Flask will be operating in debug mode")
-    app.run(debug=debug_flag)
+    app.run()
