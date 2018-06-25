@@ -24,6 +24,7 @@ run:
 	# This runs the enqueue process in Flask (for development/testing)
 	#   and then connect at 127.0.0.1:5000/client/webhook
 	# Needs a redis instance running
+	# However, even without redis you can connect to http://127.0.0.1:5000/ and get the message there.
 	QUEUE_PREFIX="dev-" python enqueue/enqueueMain.py
 
 composeEnqueue:

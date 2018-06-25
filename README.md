@@ -6,7 +6,10 @@ develop:
 [![Build Status](https://travis-ci.org/unfoldingWord-dev/d43-catalog.svg?branch=develop)](https://travis-ci.org/unfoldingWord-dev/d43-catalog)
 [![Coverage Status](https://coveralls.io/repos/github/unfoldingWord-dev/d43-catalog/badge.svg?branch=develop)](https://coveralls.io/github/unfoldingWord-dev/d43-catalog?branch=develop)
 
-# Door43-Enqueue-Job (part of tX translationConverter platform)
+# Door43-Enqueue-Job
+
+This is part of tX translationConverter platform initiated by a commit to the
+DCS (Door43 Content Service) at door43.org.
 
 See [here](https://forum.ccbt.bible/t/door43-org-tx-development-architecture/65)
 for a diagram of the overall flow of the tx (translationConverter) platform.
@@ -18,12 +21,15 @@ That is more up-to-date than the write-up of the previous platform
 
 ## Door43 modifications
 
-Modified June by RJH 2018 mainly to add vetting of the json payload from DCS
+Modified June 2018 by RJH mainly to add vetting of the json payload from DCS
 before the job is added to the redis queue.
 
-Also added Graphite stats collection.
+Also added Graphite stats collection (using statsd package).
 
 See the `Makefile` for a list of environment variables which are looked for.
+
+Requires:
+    python 3.6.5
 
 To setup:
     python3 -m venv venv
@@ -41,11 +47,14 @@ This enqueue process checks for various fields for simple validation of the
 payload, and then puts the job onto a (rq) queue (stored in redis) to be
 processed.
 
+The Python code is run in Flask, which is then served by Green Unicorn (gunicorn)
+but with nginx facing the outside world.
+
 The next part in the Door43 workflow can be found in the door43-job-handler
-repo. The job handler contains `webhook.py` (see below) which removes jobs
-from the queue and then processes them -- added them back to a `failed` queue
-if they give an exception or time-out. Note that the queue name here in
-`enqueueMain.py` must match the one in the job-handler `rq_settings.py`.
+repo. The job handler contains `webhook.py` (see below) which is given jobs
+that have been removed from the queue and then processes them -- adding them
+back to a `failed` queue if they give an exception or time-out. Note that the
+queue name here in `enqueueMain.py` must match the one in the job-handler `rq_settings.py`.
 
 
 # The following is the initial (forked) README

@@ -5,7 +5,9 @@ GOGS_URL = 'https://git.door43.org'
 
 def check_posted_payload(request):
     """
-    Returns True or False
+    Returns a 2-tuple:
+        True or False if payload checks out
+        The payload that was checked
     """
 
     """
@@ -30,18 +32,24 @@ def check_posted_payload(request):
     #print( repr(payload_json))
 
     # Bail if the URL to the repo is invalid
-    if not payload_json['repository']['html_url'].startswith(GOGS_URL):
-        return False, {'error': f'The repo does not belong to {GOGS_URL}.'}
+    try:
+        if not payload_json['repository']['html_url'].startswith(GOGS_URL):
+            return False, {'error': f'The repo does not belong to {GOGS_URL}.'}
+    except KeyError:
+        return False, {'error': 'No repo URL specified.'}
 
     # Bail if the commit branch is not the default branch
     try:
         commit_branch = payload_json['ref'].split('/')[2]
-    except IndexError:
-        return False, {'error': 'Could not determine commit branch, exiting.'}
+    except (IndexError,AttributeError):
+        return False, {'error': 'Could not determine commit branch.'}
     except KeyError:
-        return False, {'error': 'This does not appear to be a push, exiting.'}
-    if commit_branch != payload_json['repository']['default_branch']:
-        return False, {'error': f'Commit branch: {commit_branch} is not the default branch.'}
+        return False, {'error': 'No commit branch specified.'}
+    try:
+        if commit_branch != payload_json['repository']['default_branch']:
+            return False, {'error': f'Commit branch: {commit_branch} is not the default branch.'}
+    except KeyError:
+        return False, {'error': 'No default branch specified.'}
 
     # TODO: Check why this code was commented out in tx-manager -- if it's not necessary let's delete it
     # Check that the user token is valid
