@@ -1,10 +1,10 @@
 master:
-[![Build Status](https://travis-ci.org/unfoldingWord-dev/door43-enqueue-job.svg?branch=master)](https://travis-ci.org/unfoldingWord-dev/d43-catalog)
-[![Coverage Status](https://coveralls.io/repos/github/unfoldingWord-dev/d43-catalog/badge.svg?branch=master)](https://coveralls.io/github/unfoldingWord-dev/d43-catalog?branch=master)
+[![Build Status](https://travis-ci.org/unfoldingWord-dev/door43-enqueue-job.svg?branch=master)](https://travis-ci.org/unfoldingWord-dev/door43-enqueue-job)
+[![Coverage Status](https://coveralls.io/repos/github/unfoldingWord-dev/door43-enqueue-job/badge.svg?branch=master)](https://coveralls.io/github/unfoldingWord-dev/door43-enqueue-job?branch=master)
 
 develop:
-[![Build Status](https://travis-ci.org/unfoldingWord-dev/d43-catalog.svg?branch=develop)](https://travis-ci.org/unfoldingWord-dev/d43-catalog)
-[![Coverage Status](https://coveralls.io/repos/github/unfoldingWord-dev/d43-catalog/badge.svg?branch=develop)](https://coveralls.io/github/unfoldingWord-dev/d43-catalog?branch=develop)
+[![Build Status](https://travis-ci.org/unfoldingWord-dev/door43-enqueue-job.svg?branch=develop)](https://travis-ci.org/unfoldingWord-dev/door43-enqueue-job)
+[![Coverage Status](https://coveralls.io/repos/github/unfoldingWord-dev/door43-enqueue-job/badge.svg?branch=develop)](https://coveralls.io/github/unfoldingWord-dev/door43-enqueue-job?branch=develop)
 
 # Door43-Enqueue-Job
 
@@ -29,7 +29,7 @@ Also added Graphite stats collection (using statsd package).
 See the `Makefile` for a list of environment variables which are looked for.
 
 Requires:
-    python 3.6.5
+    python 3.6
 
 To setup:
     python3 -m venv venv
