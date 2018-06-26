@@ -2,12 +2,8 @@ language: python
 python:
   - '3.6'
 
-#before_install:
-#  - pip install awscli
-#  - scripts/travis_install_apex.sh
-
 install:
-  - pip install -r requirements.txt
+  - pip install -r enqueue/requirements.txt
   - pip install coveralls
 
 script: coverage run -m unittest discover -s tests/
