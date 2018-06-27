@@ -15,7 +15,7 @@ dependencies:
 #	REDIS_URL (can be omitted for testing to use a local instance)
 #	GRAPHITE_URL (defaults to localhost if missing)
 #	QUEUE_PREFIX (set to dev- for testing)
-#	FLASK_ENV can be set to development
+#	FLASK_ENV (can be set to development)
 test:
 	PYTHONPATH="enqueue/" python -m unittest discover -s tests/
 

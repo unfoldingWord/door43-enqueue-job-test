@@ -1,5 +1,6 @@
 from unittest import TestCase
 from unittest.mock import Mock
+import json
 
 from enqueue.check_posted_payload import check_posted_payload
 
@@ -148,7 +149,7 @@ class TestPayloadCheck(TestCase):
         }
         self.assertEqual(output, expected)
 
-    def test_success(self):
+    def test_basic_json_success(self):
         headers = {'X-Gogs-Event':'push'}
         payload_json = {
             'ref':'refs/heads/master',
@@ -157,6 +158,17 @@ class TestPayloadCheck(TestCase):
                 'default_branch':'master',
                 },
             }
+        mock_request = Mock(**{'get_json.return_value':payload_json})
+        mock_request.headers = headers
+        mock_request.data = payload_json
+        output = check_posted_payload(mock_request)
+        expected = True, payload_json
+        self.assertEqual(output, expected)
+
+    def test_typical_full_json_success(self):
+        headers = {'X-Gogs-Event':'push'}
+        with open( 'tests/Resources/webhook_post.json', 'rt' ) as json_file:
+            payload_json = json.load(json_file)
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers
         mock_request.data = payload_json

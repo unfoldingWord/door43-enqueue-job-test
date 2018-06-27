@@ -67,7 +67,7 @@ class TestEnqueueMain(TestCase):
         expected = "Door43_webhook ignored invalid payload with {'error': 'No repo URL specified.'}"
         self.assertEqual(response.data, expected.encode())
 
-    def test_webhook_with_good_payload(self):
+    def test_webhook_with_minimal_json_payload(self):
         headers = {'Content-type': 'application/json', 'X-Gogs-Event': 'push'}
         payload_json = {
             'ref': 'refs/heads/master',
@@ -76,6 +76,19 @@ class TestEnqueueMain(TestCase):
                 'default_branch': 'master',
                 },
             }
+        if redis_url == 'redis': # Using a (missing) local instance so won't work work
+            with self.assertRaises(redis_exceptions.ConnectionError):
+                response = client.post('/'+WEBHOOK_URL_SEGMENT, data=json.dumps(payload_json), headers=headers)
+        else: # non-local  instance of redis so it should all work and we should get a page back
+            response = client.post('/'+WEBHOOK_URL_SEGMENT, data=json.dumps(payload_json), headers=headers)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers['Content-Type'], 'text/html; charset=utf-8' )
+            self.assertTrue('queued valid job to' in response.data.decode())
+
+    def test_webhook_with_typical_full_json_payload(self):
+        headers = {'Content-type': 'application/json', 'X-Gogs-Event': 'push'}
+        with open( 'tests/Resources/webhook_post.json', 'rt' ) as json_file:
+            payload_json = json.load(json_file)
         if redis_url == 'redis': # Using a (missing) local instance so won't work work
             with self.assertRaises(redis_exceptions.ConnectionError):
                 response = client.post('/'+WEBHOOK_URL_SEGMENT, data=json.dumps(payload_json), headers=headers)
