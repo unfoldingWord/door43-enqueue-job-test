@@ -58,11 +58,12 @@ def showDB():
 
     # Look at environment variables
     result_string += '<h1>Environment Variables</h1>'
-    result_string += f"<p>QUEUE_PREFIX={getenv('QUEUE_PREFIX', '')}</p>"
-    result_string += f"<p>DEBUG_MODE={getenv('DEBUG_MODE', False)}</p>"
-    result_string += f"<p>REDIS_URL={getenv('REDIS_URL', 'redis')}</p>"
+    result_string += f"<p>QUEUE_PREFIX={getenv('QUEUE_PREFIX', '(not set)=>(no prefix)')}</p>"
+    result_string += f"<p>FLASK_ENV={getenv('FLASK_ENV', '(not set)=>(normal/production)')}</p>"
+    result_string += f"<p>REDIS_URL={getenv('REDIS_URL', '(not set)=>redis')}</p>"
+    result_string += f"<p>GRAPHITE_URL={getenv('GRAPHITE_URL', '(not set)=>localhost')}</p>"
 
-    # Look at the queues
+    # Look at all the potential queues
     for this_queue_name in (OUR_NAME, 'dev-'+OUR_NAME, 'failed'):
         q = Queue(this_queue_name, connection=r)
         queue_output_string = ''
