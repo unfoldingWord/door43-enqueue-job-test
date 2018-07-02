@@ -76,7 +76,7 @@ class TestEnqueueMain(TestCase):
                 'default_branch': 'master',
                 },
             }
-        if redis_url == 'redis': # Using a (missing) local instance so won't work work
+        if redis_url == 'redis': # Using a (missing) local instance so won't all work
             with self.assertRaises(redis_exceptions.ConnectionError):
                 response = client.post('/'+WEBHOOK_URL_SEGMENT, data=json.dumps(payload_json), headers=headers)
         else: # non-local  instance of redis so it should all work and we should get a page back
@@ -89,7 +89,7 @@ class TestEnqueueMain(TestCase):
         headers = {'Content-type': 'application/json', 'X-Gogs-Event': 'push'}
         with open( 'tests/Resources/webhook_post.json', 'rt' ) as json_file:
             payload_json = json.load(json_file)
-        if redis_url == 'redis': # Using a (missing) local instance so won't work work
+        if redis_url == 'redis': # Using a (missing) local instance so won't all work
             with self.assertRaises(redis_exceptions.ConnectionError):
                 response = client.post('/'+WEBHOOK_URL_SEGMENT, data=json.dumps(payload_json), headers=headers)
         else: # non-local  instance of redis so it should all work and we should get a page back
@@ -97,4 +97,5 @@ class TestEnqueueMain(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.headers['Content-Type'], 'text/html; charset=utf-8' )
             self.assertTrue('queued valid job to' in response.data.decode())
+            # After job has run, should update https://dev.door43.org/u/tx-manager-test-data/en-obs-rc-0.2/93829a566c/
 
