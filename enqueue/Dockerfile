@@ -1,3 +1,6 @@
+# NOTE: This docker container is built automatically
+#       by the Docker Compose in the enclosing folder
+
 FROM python:alpine
 
 ADD . /code
