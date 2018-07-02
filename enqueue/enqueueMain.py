@@ -19,6 +19,7 @@ from check_posted_payload import check_posted_payload
 
 OUR_NAME = 'Door43_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
 WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
+JOB_TIMEOUT = '200s' # Then job will be considered to have failed
 
 
 # Look at relevant environment variables
@@ -103,19 +104,17 @@ def job_receiver():
             stats_client.gauge('FailedQueueLength', len_failed_q)
             # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
             #       The timeout value determines the max run time of the worker once the job is accessed
-            q.enqueue('webhook.job', data_dict, timeout='120s') # A function named webhook.job will be called by the worker
-            # NOTE: The above line can return a result from the webhook.job function
-            #   By default, the result remains available for 500s
+            q.enqueue('webhook.job', data_dict, timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
+            # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
             if prefix:
                 other_queue_name = OUR_NAME if prefix else 'dev-'+OUR_NAME
                 other_q = Queue(other_queue_name, connection=StrictRedis(host=redis_url))
-                return f'{OUR_NAME} queued valid job to {queue_name} ({len(q)} jobs now, {len(other_q)} jobs in {other_queue_name} queue, {len_failed_q} failed jobs) at {datetime.utcnow()}'
+                return f'{OUR_NAME} queued valid job to {queue_name} ({len(q)} jobs now, {len(other_q)} jobs in {other_queue_name} queue, ' \
+                                                                      f'{len_failed_q} failed jobs) at {datetime.utcnow()}'
             else: #production mode
                 return f'{OUR_NAME} queued valid job to {queue_name} ({len(q)} jobs now, {len_failed_q} failed jobs) at {datetime.utcnow()}'
         else:
             stats_client.incr('InvalidPostsReceived')
-            # TODO: Check if we also need to log these errors (in data_dict) somewhere?
-            #           -- they could signal either a caller fault or an attack
             return f'{OUR_NAME} ignored invalid payload with {data_dict}', 400
     else: # should never happen
         return f'This is a {OUR_NAME} webhook receiver only.'
