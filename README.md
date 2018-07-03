@@ -16,7 +16,7 @@ for a diagram of the overall flow of the tx (translationConverter) platform.
 
 That is more up-to-date than the write-up of the previous platform
 [here](https://github.com/unfoldingWord-dev/door43.org/wiki/tX-Development-Architecture)
-(which was too dependant on expensive AWS lambda functions).
+(which was too dependent on expensive AWS lambda functions).
 
 
 ## Door43 modifications
@@ -28,19 +28,31 @@ Also added Graphite stats collection (using statsd package).
 
 See the `Makefile` for a list of environment variables which are looked for.
 
+```
 Requires:
-    python 3.6
+    Python 3.6
 
 To setup:
     python3 -m venv venv
     source venv/bin/activate
     make dependencies
 
-To run:
+To try Python code in Flask:
+    make run
+    (then view at http://127.0.0.1:5000/
+        but can't send data to http://127.0.0.1:5000/client/webhook/
+        or view debugging info at http://127.0.0.1:5000/showDB/
+        if there is no redis instance running)
+
+To run (using Flask and gunicorn and nginx, plus redis) in docker containers:
     make composeEnqueue
+    (then view at http://127.0.0.1:8080/
+        send data to http://127.0.0.1:8080/client/webhook/
+        and view debugging info at http://127.0.0.1:8080/showDB/)
+```
 
 Basically this small program collects the json payload from the DCS (Door43
-Content Service) which connects to the .../client/webhook/ URL. (Notice the
+Content Service) which connects to the `.../client/webhook/` URL. (Notice the
 trailing slash.)
 
 This enqueue process checks for various fields for simple validation of the
