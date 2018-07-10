@@ -3,7 +3,7 @@
 This (shorter) README is for the Docker Hub long description.
 
 This container is part of tX translationConverter platform initiated by a commit to
-the DCS (Door43 Content Service) at door43.org.
+the DCS (Door43 Content Service) at [door43.org](https://door43.org/).
 
 See [here](https://forum.ccbt.bible/t/door43-org-tx-development-architecture/65)
 for a diagram of the overall flow of the tx (translationConverter) platform.
@@ -15,7 +15,7 @@ Modified June 2018 by RJH mainly to add vetting of the json payload from DCS
 before the job is added to the redis queue.
 
 Also added Graphite stats collection (using statsd package)
-and viewable with Grafana at https://dash.door43.org/.
+and viewable with Grafana at [dash.door43.org](https://dash.door43.org/).
 
 Basically this small program collects the json payload from the DCS (Door43
 Content Service) which connects to the `.../client/webhook/` URL. (Notice the
