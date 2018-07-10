@@ -45,9 +45,9 @@ To try Python code in Flask:
         if there is no redis instance running)
 
 To run (using Flask and gunicorn and nginx, plus redis) in docker containers:
-    make composeEnqueue
+    make composeEnqueueRedis
     (then view at http://127.0.0.1:8080/
-        send data to http://127.0.0.1:8080/client/webhook/
+        send json payload data to http://127.0.0.1:8080/client/webhook/
         and view debugging info at http://127.0.0.1:8080/showDB/)
 ```
 
@@ -62,11 +62,11 @@ processed.
 The Python code is run in Flask, which is then served by Green Unicorn (gunicorn)
 but with nginx facing the outside world.
 
-The next part in the Door43 workflow can be found in the door43-job-handler
+The next part in the Door43 workflow can be found in the [door43-job-handler](https://github.com/unfoldingWord-dev/door43-job-handler)
 repo. The job handler contains `webhook.py` (see below) which is given jobs
 that have been removed from the queue and then processes them -- adding them
 back to a `failed` queue if they give an exception or time-out. Note that the
-queue name here in `enqueueMain.py` must match the one in the job-handler `rq_settings.py`.
+queue name here in `enqueueMain.py` must match the one in the job handler `rq_settings.py`.
 
 
 # The following is the initial (forked) README
