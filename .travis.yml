@@ -1,3 +1,9 @@
+# .travis.yml
+#
+# Requires the following environment variables to be set:
+#   DOCKER_USERNAME
+#   DOCKER_PASSWORD
+
 language: python
 # See available versions at https://docs.travis-ci.com/user/languages/python/
 python:

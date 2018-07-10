@@ -24,7 +24,8 @@ That is more up-to-date than the write-up of the previous platform
 Modified June 2018 by RJH mainly to add vetting of the json payload from DCS
 before the job is added to the redis queue.
 
-Also added Graphite stats collection (using statsd package).
+Also added Graphite stats collection (using statsd package)
+and viewable with Grafana at https://dash.door43.org/.
 
 See the `Makefile` for a list of environment variables which are looked for.
 
@@ -44,11 +45,18 @@ To try Python code in Flask:
         or view debugging info at http://127.0.0.1:5000/showDB/
         if there is no redis instance running)
 
-To run (using Flask and gunicorn and nginx, plus redis) in docker containers:
+To run (using Flask and gunicorn and nginx, plus redis) in three docker containers:
     make composeEnqueueRedis
     (then view at http://127.0.0.1:8080/
         send json payload data to http://127.0.0.1:8080/client/webhook/
         and view debugging info at http://127.0.0.1:8080/showDB/)
+
+To build a docker image:
+    make image
+
+To push the image to docker hub:
+    docker login -u <dockerUsername>
+    make pushImage
 ```
 
 Basically this small program collects the json payload from the DCS (Door43
