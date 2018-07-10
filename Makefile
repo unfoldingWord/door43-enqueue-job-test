@@ -12,7 +12,7 @@ dependencies:
 	# It is recommended that a Python3 virtual environment be set-up before this point
 	#  python3 -m venv venv
 	#  source venv/bin/activate
-	pip3 install -r enqueue/requirements.txt
+	pip3 install --requirement enqueue/requirements.txt
 
 # NOTE: The following optional environment variables can be set:
 #	REDIS_URL (can be omitted for testing to use a local instance)
@@ -40,9 +40,9 @@ composeEnqueueRedis:
 
 image:
 	# Expects environment variable DOCKER_USERNAME to be set
-	docker build --tag $(DOCKER_USERNAME)/door43enqueuejob_enqueue:latest enqueue
+	docker build --tag $(DOCKER_USERNAME)/door43_enqueuejob:latest enqueue
 
 pushImage:
 	# Expects environment variable DOCKER_USERNAME to be set
 	# Expects to be already logged into Docker, e.g., docker login -u $(DOCKER_USERNAME)
-	docker push $(DOCKER_USERNAME)/door43enqueuejob_enqueue:latest
+	docker push $(DOCKER_USERNAME)/door43_enqueuejob:latest

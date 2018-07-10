@@ -13,8 +13,12 @@ python:
 services:
   - docker
 
+#before_install:
+  #- pip install awscli
+  #- scripts/travis_install_apex.sh
+
 install:
-  - pip3 install -r enqueue/requirements.txt
+  - pip3 install --requirement enqueue/requirements.txt
   - pip3 install coveralls
 
 # Run the tests first
