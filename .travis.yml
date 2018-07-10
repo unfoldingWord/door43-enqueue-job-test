@@ -8,7 +8,7 @@ language: python
 # See available versions at https://docs.travis-ci.com/user/languages/python/
 python:
   - '3.6'
-#  - '3.7-dev' # rq fails
+  - '3.7-dev' # rq fails
 
 services:
   - docker
@@ -19,10 +19,9 @@ install:
 
 # Run the tests first
 #  and if they succeed, make the docker image(s)
+#   (and check that both succeed)
 script:
-  - PYTHONPATH="enqueue/" coverage run -m unittest tests/test_payload_check.py
-  # NOTE: Complete tests (below) are temporarily disabled (for testing docker deployment)
-  #- PYTHONPATH="enqueue/" coverage run -m unittest discover -s tests/
+  - PYTHONPATH="enqueue/" coverage run -m unittest discover -s tests/
   - make image
 
 # Only execute the following instructions in the case of a success
