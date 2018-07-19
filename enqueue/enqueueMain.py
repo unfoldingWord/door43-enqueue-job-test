@@ -72,11 +72,12 @@ def showDB():
         queue_output_string += f'<p>Jobs ({len(q.jobs)}): {q.jobs}</p>'
         result_string += f'<h1>{this_queue_name} queue:</h1>{queue_output_string}'
 
-    # Look at the raw keys
-    keys_output_string = ''
-    for key in r.scan_iter():
-       keys_output_string += '<p>' + key.decode() + '</p>\n'
-    result_string += f'<h1>All keys ({len(r.keys())}):</h1>{keys_output_string}'
+    if redis_url == 'redis': # Can't do this for production redis (too many keys!!!)
+        # Look at the raw keys
+        keys_output_string = ''
+        for key in r.scan_iter():
+            keys_output_string += '<p>' + key.decode() + '</p>\n'
+        result_string += f'<h1>All keys ({len(r.keys())}):</h1>{keys_output_string}'
 
     return result_string
 # end of showDB()

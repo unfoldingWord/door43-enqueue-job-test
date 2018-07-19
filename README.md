@@ -24,8 +24,8 @@ That is more up-to-date than the write-up of the previous platform
 Modified June 2018 by RJH mainly to add vetting of the json payload from DCS
 before the job is added to the redis queue.
 
-Also added Graphite stats collection (using statsd package)
-and viewable with Grafana at [dash.door43.org](https://dash.door43.org/).
+Also added Graphite stats collection (using statsd package).
+and viewable with Grafana.
 
 See the `Makefile` for a list of environment variables which are looked for.
 
