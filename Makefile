@@ -38,11 +38,16 @@ composeEnqueueRedis:
 	docker-compose --file docker-compose-enqueue-redis.yaml build
 	docker-compose --file docker-compose-enqueue-redis.yaml up
 
-image:
-	# Expects environment variable DOCKER_USERNAME to be set
-	docker build --tag $(DOCKER_USERNAME)/door43_enqueuejob:latest enqueue
+imageDev:
+	docker build --tag unfoldingword/door43_enqueuejob:develop enqueue
 
-pushImage:
-	# Expects environment variable DOCKER_USERNAME to be set
+imageMaster:
+	docker build --tag unfoldingword/door43_enqueuejob:master enqueue
+
+pushDevImage:
 	# Expects to be already logged into Docker, i.e., docker login -u $(DOCKER_USERNAME)
-	docker push $(DOCKER_USERNAME)/door43_enqueuejob:latest
+	docker push unfoldingword/door43_enqueuejob:develop
+
+pushMasterImage:
+	# Expects to be already logged into Docker, i.e., docker login -u $(DOCKER_USERNAME)
+	docker push unfoldingword/door43_enqueuejob:master

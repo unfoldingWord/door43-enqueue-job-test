@@ -26,7 +26,6 @@ install:
 #   (and check that both succeed)
 script:
   - PYTHONPATH="enqueue/" coverage run -m unittest discover -s tests/
-  - make image
 
 # Only execute the following instructions in the case of a success
 #  (failing at this point won't mark the build as a failure).
@@ -36,11 +35,20 @@ script:
 #  and then change the environment in the settings pannel.
 after_success:
   - coveralls
-  - if [[ "$TRAVIS_BRANCH" == "master" ]]; then
-      docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD ;
-      make pushImage ;
-    fi
 
 env:
   global:
     - PYTHONDONTWRITEBYTECODE=true
+
+deploy:
+- provider: script
+  skip_cleanup: true
+  script: bash ./deploy.sh develop
+  on:
+    branch: develop
+- provider: script
+  skip_cleanup: true
+  script: bash ./deploy.sh master
+  on:
+    branch: master
+
