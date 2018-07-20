@@ -1,9 +1,6 @@
 # Adapted by RJH June 2018 from fork of https://github.com/lscsoft/webhook-queue (Public Domain / unlicense.org)
 #   The main change was to add some vetting of the json payload before allowing the job to be queued.
 
-# TODO: Needs to be tested with the actual AWS redis instance
-# TODO: Still haven't figured out how to view stats
-
 # Python imports
 from os import getenv
 
@@ -24,14 +21,14 @@ JOB_TIMEOUT = '200s' # Then job will be considered to have failed
 
 # Look at relevant environment variables
 prefix = getenv('QUEUE_PREFIX', '') # Gets (optional) QUEUE_PREFIX environment variable -- set to 'dev-' for development
-queue_name = prefix + OUR_NAME
+our_adjusted_name = prefix + OUR_NAME
 
 # Get the redis URL from the environment, otherwise use a local test instance
 redis_url = getenv('REDIS_URL', 'redis')
 
 # Get the Graphite URL from the environment, otherwise use a local test instance
 graphite_url = getenv('GRAPHITE_URL','localhost')
-stats_client = StatsClient(host=graphite_url, port=8125, prefix=OUR_NAME)
+stats_client = StatsClient(host=graphite_url, port=8125, prefix=our_adjusted_name)
 
 
 
@@ -65,12 +62,12 @@ def showDB():
     result_string += f"<p>GRAPHITE_URL={getenv('GRAPHITE_URL', '(not set)=>localhost')}</p>"
 
     # Look at all the potential queues
-    for this_queue_name in (OUR_NAME, 'dev-'+OUR_NAME, 'failed'):
-        q = Queue(this_queue_name, connection=r)
+    for this_our_adjusted_name in (OUR_NAME, 'dev-'+OUR_NAME, 'failed'):
+        q = Queue(this_our_adjusted_name, connection=r)
         queue_output_string = ''
         #queue_output_string += '<p>Job IDs ({0}): {1}</p>'.format(len(q.job_ids), q.job_ids)
         queue_output_string += f'<p>Jobs ({len(q.jobs)}): {q.jobs}</p>'
-        result_string += f'<h1>{this_queue_name} queue:</h1>{queue_output_string}'
+        result_string += f'<h1>{this_our_adjusted_name} queue:</h1>{queue_output_string}'
 
     if redis_url == 'redis': # Can't do this for production redis (too many keys!!!)
         # Look at the raw keys
@@ -89,7 +86,7 @@ def job_receiver():
     Accepts POST requests and checks the (json) payload
 
     Queues approved jobs at redis instance at global redis_url.
-    Queue name is queue_name.
+    Queue name is our_adjusted_name.
     """
     if request.method == 'POST':
         stats_client.incr('TotalPostsReceived')
@@ -97,7 +94,7 @@ def job_receiver():
         if response_ok:
             stats_client.incr('GoodPostsReceived')
             r = StrictRedis(host=redis_url)
-            q = Queue(queue_name, connection=r)
+            q = Queue(our_adjusted_name, connection=r)
             len_q = len(q)
             stats_client.gauge(prefix+'QueueLength', len_q)
             failed_q = Queue('failed', connection=r)
@@ -108,12 +105,12 @@ def job_receiver():
             q.enqueue('webhook.job', data_dict, timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
             # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
             if prefix:
-                other_queue_name = OUR_NAME if prefix else 'dev-'+OUR_NAME
-                other_q = Queue(other_queue_name, connection=StrictRedis(host=redis_url))
-                return f'{OUR_NAME} queued valid job to {queue_name} ({len(q)} jobs now, {len(other_q)} jobs in {other_queue_name} queue, ' \
+                other_our_adjusted_name = OUR_NAME if prefix else 'dev-'+OUR_NAME
+                other_q = Queue(other_our_adjusted_name, connection=StrictRedis(host=redis_url))
+                return f'{OUR_NAME} queued valid job to {our_adjusted_name} ({len(q)} jobs now, {len(other_q)} jobs in {other_our_adjusted_name} queue, ' \
                                                                       f'{len_failed_q} failed jobs) at {datetime.utcnow()}'
             else: #production mode
-                return f'{OUR_NAME} queued valid job to {queue_name} ({len(q)} jobs now, {len_failed_q} failed jobs) at {datetime.utcnow()}'
+                return f'{OUR_NAME} queued valid job to {our_adjusted_name} at {datetime.utcnow()}'
         else:
             stats_client.incr('InvalidPostsReceived')
             return f'{OUR_NAME} ignored invalid payload with {data_dict}', 400
