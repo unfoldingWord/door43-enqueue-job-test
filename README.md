@@ -31,15 +31,20 @@ See the `Makefile` for a list of environment variables which are looked for.
 
 ```
 Requires:
-    Python 3.6
+    Linux
+    Python 3.6 (or later)
 
 To setup:
     python3 -m venv venv
     source venv/bin/activate
     make dependencies
 
+Set environment variables:
+    (see enqueue/Makefile for a list of expected and optional environment variables)
+    e.g., export QUEUE_PREFIX="dev-"
+    
 To try Python code in Flask:
-    make run
+    make runFlask
     (then view at http://127.0.0.1:5000/
         but can't send data to http://127.0.0.1:5000/client/webhook/
         or view debugging info at http://127.0.0.1:5000/showDB/
@@ -52,6 +57,7 @@ To run (using Flask and gunicorn and nginx, plus redis) in three docker containe
         and view debugging info at http://127.0.0.1:8080/showDB/)
 
 To build a docker image:
+    (requires environment variable DOCKER_USERNAME to be set)
     make image
 
 To push the image to docker hub:

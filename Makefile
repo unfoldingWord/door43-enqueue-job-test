@@ -22,7 +22,7 @@ dependencies:
 test:
 	PYTHONPATH="enqueue/" python3 -m unittest discover -s tests/
 
-run:
+runFlask:
 	# NOTE: For very preliminary testing only (unless REDIS_URL is already set-up)
 	# This runs the enqueue process in Flask (for development/testing)
 	#   and then connect at 127.0.0.1:5000/client/webhook
@@ -44,5 +44,5 @@ image:
 
 pushImage:
 	# Expects environment variable DOCKER_USERNAME to be set
-	# Expects to be already logged into Docker, e.g., docker login -u $(DOCKER_USERNAME)
+	# Expects to be already logged into Docker, i.e., docker login -u $(DOCKER_USERNAME)
 	docker push $(DOCKER_USERNAME)/door43_enqueuejob:latest
