@@ -15,7 +15,9 @@ services:
     depends_on:
       - enqueue
   enqueue:
-    build: ./enqueue
+    build:
+      context: ./enqueue
+      dockerfile: Dockerfile-dev
     depends_on:
       - redis
   redis:

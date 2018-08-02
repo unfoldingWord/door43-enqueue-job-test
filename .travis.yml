@@ -41,14 +41,14 @@ env:
     - PYTHONDONTWRITEBYTECODE=true
 
 deploy:
-- provider: script
-  skip_cleanup: true
-  script: bash ./deploy.sh develop
-  on:
-    branch: develop
-- provider: script
-  skip_cleanup: true
-  script: bash ./deploy.sh master
-  on:
-    branch: master
+  - provider: script
+    skip_cleanup: true
+    script: bash ./deploy.sh develop
+    on:
+      branch: develop
+  - provider: script
+    skip_cleanup: true
+    script: bash ./deploy.sh master
+    on:
+      branch: master
 

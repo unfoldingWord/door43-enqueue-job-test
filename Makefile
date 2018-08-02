@@ -31,7 +31,7 @@ runFlask:
 	QUEUE_PREFIX="dev-" python3 enqueue/enqueueMain.py
 
 composeEnqueueRedis:
-	# NOTE: For testing only
+	# NOTE: For testing only (using the 'dev' prefix)
 	# This runs the enqueue and redis processes via nginx/gunicorn
 	#   and then connect at 127.0.0.1:8080/client/webhook
 	#   and "rq worker --config settings_enqueue" can connect to redis at 127.0.0.1:6379
@@ -39,10 +39,10 @@ composeEnqueueRedis:
 	docker-compose --file docker-compose-enqueue-redis.yaml up
 
 imageDev:
-	docker build --tag unfoldingword/door43_enqueuejob:develop enqueue
+	docker build --file enqueue/Dockerfile-dev --tag unfoldingword/door43_enqueuejob:develop enqueue
 
 imageMaster:
-	docker build --tag unfoldingword/door43_enqueuejob:master enqueue
+	docker build --file enqueue/Dockerfile-noDev --tag unfoldingword/door43_enqueuejob:master enqueue
 
 pushDevImage:
 	# Expects to be already logged into Docker, i.e., docker login -u $(DOCKER_USERNAME)
