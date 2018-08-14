@@ -17,7 +17,7 @@ services:
   enqueue:
     build:
       context: ./enqueue
-      dockerfile: Dockerfile-dev
+      dockerfile: Dockerfile-developBranch
     depends_on:
       - redis
   redis:

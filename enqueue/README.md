@@ -1,6 +1,6 @@
 # Door43-Enqueue-Job
 
-This (shorter) README is for the Docker Hub long description.
+This (shorter) README was for the Docker Hub long description (but that doesn't actually work in Docker it seems).
 
 This container is part of tX translationConverter platform initiated by a commit to
 the DCS (Door43 Content Service) at [door43.org](https://door43.org/).
@@ -15,7 +15,7 @@ Modified June 2018 by RJH mainly to add vetting of the json payload from DCS
 before the job is added to the redis queue.
 
 Also added Graphite stats collection (using statsd package)
-and viewable with Grafana at [dash.door43.org](https://dash.door43.org/).
+and viewable with Grafana.
 
 Basically this small program collects the json payload from the DCS (Door43
 Content Service) which connects to the `.../client/webhook/` URL. (Notice the
