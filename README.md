@@ -42,7 +42,7 @@ To setup:
 Set environment variables:
     (see enqueue/Makefile for a list of expected and optional environment variables)
     e.g., export QUEUE_PREFIX="dev-"
-    
+
 To try Python code in Flask:
     make runFlask
     (then view at http://127.0.0.1:5000/
@@ -75,6 +75,26 @@ processed.
 
 The Python code is run in Flask, which is then served by Green Unicorn (gunicorn)
 but with nginx facing the outside world.
+
+## Deploymemt
+
+Travis-CI is hooked to from GitHub to automatically test commits to both the `develop`
+and `master` branches, and on success, to build containers (tagged with those branch names)
+that are pushed to [DockerHub](https://hub.docker.com/u/unfoldingword/).
+
+```
+To test the container use:
+ 	docker run --env QUEUE_PREFIX="dev-" --env FLASK_ENV="development" --env REDIS_URL=<redis_url> --net="host" --name door43_enqueuejob --rm door43_enqueuejob
+
+
+To run the container in production use with the desired values:
+ 	docker run --env GRAPHITE_URL=<graphite_url> --env REDIS_URL=<redis_url> --net="host" --name door43_enqueuejob --rm door43_enqueuejob
+```
+
+The production container will be deployed to the unfoldingWord AWS EC2 instance, where
+[Watchtower](https://github.com/v2tec/watchtower) will automatically check for, pull, and run updated containers.
+
+## Further processing
 
 The next part in the Door43 workflow can be found in the [door43-job-handler](https://github.com/unfoldingWord-dev/door43-job-handler)
 repo. The job handler contains `webhook.py` (see below) which is given jobs
