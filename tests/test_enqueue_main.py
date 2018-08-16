@@ -6,7 +6,7 @@ import json
 from flask import Flask, request
 from redis import exceptions as redis_exceptions
 
-from enqueue.enqueueMain import app, OUR_NAME, WEBHOOK_URL_SEGMENT, redis_url
+from enqueue.enqueueMain import app, OUR_NAME, WEBHOOK_URL_SEGMENT, redis_hostname
 
 
 app.config['TESTING'] = True
@@ -29,7 +29,7 @@ class TestEnqueueMain(TestCase):
 
     def test_showDB_get(self):
         # TODO: Can we run a local redis instance for these tests?
-        if redis_url == 'redis': # Using a (missing) local instance so won't work work
+        if redis_hostname == 'redis': # Using a (missing) local instance so won't work work
             with self.assertRaises(redis_exceptions.ConnectionError):
                 response = client.get('/showDB/')
         else: # non-local  instance of redis so it should all work and we should get a page back
@@ -76,7 +76,7 @@ class TestEnqueueMain(TestCase):
                 'default_branch': 'master',
                 },
             }
-        if redis_url == 'redis': # Using a (missing) local instance so won't all work
+        if redis_hostname == 'redis': # Using a (missing) local instance so won't all work
             with self.assertRaises(redis_exceptions.ConnectionError):
                 response = client.post('/'+WEBHOOK_URL_SEGMENT, data=json.dumps(payload_json), headers=headers)
         else: # non-local  instance of redis so it should all work and we should get a page back
@@ -89,7 +89,7 @@ class TestEnqueueMain(TestCase):
         headers = {'Content-type': 'application/json', 'X-Gogs-Event': 'push'}
         with open( 'tests/Resources/webhook_post.json', 'rt' ) as json_file:
             payload_json = json.load(json_file)
-        if redis_url == 'redis': # Using a (missing) local instance so won't all work
+        if redis_hostname == 'redis': # Using a (missing) local instance so won't all work
             with self.assertRaises(redis_exceptions.ConnectionError):
                 response = client.post('/'+WEBHOOK_URL_SEGMENT, data=json.dumps(payload_json), headers=headers)
         else: # non-local  instance of redis so it should all work and we should get a page back
