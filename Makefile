@@ -15,15 +15,15 @@ dependencies:
 	pip3 install --requirement enqueue/requirements.txt
 
 # NOTE: The following optional environment variables can be set:
-#	REDIS_URL (can be omitted for testing if a local instance is running)
-#	GRAPHITE_URL (defaults to localhost if missing)
+#	REDIS_HOSTNAME (can be omitted for testing if a local instance is running; port 6379 is assumed always)
+#	GRAPHITE_HOSTNAME (defaults to localhost if missing)
 #	QUEUE_PREFIX (set it to dev- for testing)
 #	FLASK_ENV (can be set to "development" for testing)
 test:
 	PYTHONPATH="enqueue/" python3 -m unittest discover -s tests/
 
 runFlask:
-	# NOTE: For very preliminary testing only (unless REDIS_URL is already set-up)
+	# NOTE: For very preliminary testing only (unless REDIS_HOSTNAME is already set-up)
 	# This runs the enqueue process in Flask (for development/testing)
 	#   and then connect at 127.0.0.1:5000/client/webhook
 	# Needs a redis instance running
@@ -54,8 +54,8 @@ pushMasterImage:
 	docker push unfoldingword/door43_enqueue_job:master
 
 # NOTE: To test the container use:
-# 	docker run --env QUEUE_PREFIX="dev-" --env FLASK_ENV="development" --env REDIS_URL=<redis_url> --net="host" --name door43_enqueue_job --rm door43_enqueue_job
+# 	docker run --env QUEUE_PREFIX="dev-" --env FLASK_ENV="development" --env REDIS_HOSTNAME=<redis_hostname> --net="host" --name door43_enqueue_job --rm door43_enqueue_job
 
 
 # NOTE: To run the container in production use with the desired values:
-# 	docker run --env GRAPHITE_URL=<graphite_url> --env REDIS_URL=<redis_url> --net="host" --name door43_enqueue_job --rm door43_enqueue_job
+# 	docker run --env GRAPHITE_HOSTNAME=<graphite_hostname> --env REDIS_HOSTNAME=<redis_hostname> --net="host" --name door43_enqueue_job --rm door43_enqueue_job

@@ -8,6 +8,7 @@ from os import getenv
 
 # Library (PyPi) imports
 from flask import Flask, request
+# NOTE: We use StrictRedis() because we don't need the backwards compatibility of Redis()
 from redis import StrictRedis
 from rq import Queue
 from datetime import datetime
@@ -26,10 +27,10 @@ prefix = getenv('QUEUE_PREFIX', '') # Gets (optional) QUEUE_PREFIX environment v
 our_adjusted_name = prefix + OUR_NAME
 
 # Get the redis URL from the environment, otherwise use a local test instance
-redis_url = getenv('REDIS_URL', 'redis')
+redis_hostname = getenv('REDIS_HOSTNAME', 'redis')
 
 # Get the Graphite URL from the environment, otherwise use a local test instance
-graphite_url = getenv('GRAPHITE_URL','localhost')
+graphite_url = getenv('GRAPHITE_HOSTNAME','localhost')
 stats_client = StatsClient(host=graphite_url, port=8125, prefix=our_adjusted_name)
 
 
@@ -53,15 +54,15 @@ def showDB():
     """
     Display a helpful status list to a user connecting to our debug URL.
     """
-    r = StrictRedis(host=redis_url)
+    r = StrictRedis(host=redis_hostname)
     result_string = f'This {OUR_NAME} webhook enqueuing service has:'
 
     # Look at environment variables
     result_string += '<h1>Environment Variables</h1>'
     result_string += f"<p>QUEUE_PREFIX={getenv('QUEUE_PREFIX', '(not set)=>(no prefix)')}</p>"
     result_string += f"<p>FLASK_ENV={getenv('FLASK_ENV', '(not set)=>(normal/production)')}</p>"
-    result_string += f"<p>REDIS_URL={getenv('REDIS_URL', '(not set)=>redis')}</p>"
-    result_string += f"<p>GRAPHITE_URL={getenv('GRAPHITE_URL', '(not set)=>localhost')}</p>"
+    result_string += f"<p>REDIS_HOSTNAME={getenv('REDIS_HOSTNAME', '(not set)=>redis')}</p>"
+    result_string += f"<p>GRAPHITE_HOSTNAME={getenv('GRAPHITE_HOSTNAME', '(not set)=>localhost')}</p>"
 
     # Look at all the potential queues
     for this_our_adjusted_name in (OUR_NAME, 'dev-'+OUR_NAME, 'failed'):
@@ -71,7 +72,7 @@ def showDB():
         queue_output_string += f'<p>Jobs ({len(q.jobs)}): {q.jobs}</p>'
         result_string += f'<h1>{this_our_adjusted_name} queue:</h1>{queue_output_string}'
 
-    if redis_url == 'redis': # Can't do this for production redis (too many keys!!!)
+    if redis_hostname == 'redis': # Can't do this for production redis (too many keys!!!)
         # Look at the raw keys
         keys_output_string = ''
         for key in r.scan_iter():
@@ -87,15 +88,15 @@ def job_receiver():
     """
     Accepts POST requests and checks the (json) payload
 
-    Queues approved jobs at redis instance at global redis_url.
-    Queue name is our_adjusted_name.
+    Queues the approved jobs at redis instance at global redis_hostname:6379.
+    Queue name is our_adjusted_name (may be prefixed).
     """
     if request.method == 'POST':
         stats_client.incr('TotalPostsReceived')
         response_ok, data_dict = check_posted_payload(request) # data_dict is json payload if successful, else error info
         if response_ok:
             stats_client.incr('GoodPostsReceived')
-            r = StrictRedis(host=redis_url)
+            r = StrictRedis(host=redis_hostname)
             q = Queue(our_adjusted_name, connection=r)
             len_q = len(q)
             stats_client.gauge(prefix+'QueueLength', len_q)
@@ -109,7 +110,7 @@ def job_receiver():
             # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
             if prefix:
                 other_our_adjusted_name = OUR_NAME if prefix else 'dev-'+OUR_NAME
-                other_q = Queue(other_our_adjusted_name, connection=StrictRedis(host=redis_url))
+                other_q = Queue(other_our_adjusted_name, connection=StrictRedis(host=redis_hostname))
                 return f'{OUR_NAME} queued valid job to {our_adjusted_name} ({len(q)} jobs now, {len(other_q)} jobs in {other_our_adjusted_name} queue, ' \
                                                                       f'{len_failed_q} failed jobs) at {datetime.utcnow()}'
             else: #production mode
