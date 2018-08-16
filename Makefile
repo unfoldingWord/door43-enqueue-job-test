@@ -40,22 +40,22 @@ composeEnqueueRedis:
 
 imageDev:
 	# NOTE: This build sets the prefix to 'dev-' and sets debug mode
-	docker build --file enqueue/Dockerfile-developBranch --tag unfoldingword/door43_enqueuejob:develop enqueue
+	docker build --file enqueue/Dockerfile-developBranch --tag unfoldingword/door43_enqueue_job:develop enqueue
 
 imageMaster:
-	docker build --file enqueue/Dockerfile-masterBranch --tag unfoldingword/door43_enqueuejob:master enqueue
+	docker build --file enqueue/Dockerfile-masterBranch --tag unfoldingword/door43_enqueue_job:master enqueue
 
 pushDevImage:
 	# Expects to be already logged into Docker, i.e., docker login -u $(DOCKER_USERNAME)
-	docker push unfoldingword/door43_enqueuejob:develop
+	docker push unfoldingword/door43_enqueue_job:develop
 
 pushMasterImage:
 	# Expects to be already logged into Docker, i.e., docker login -u $(DOCKER_USERNAME)
-	docker push unfoldingword/door43_enqueuejob:master
+	docker push unfoldingword/door43_enqueue_job:master
 
 # NOTE: To test the container use:
-# 	docker run --env QUEUE_PREFIX="dev-" --env FLASK_ENV="development" --env REDIS_URL=<redis_url> --net="host" --name door43_enqueuejob --rm door43_enqueuejob
+# 	docker run --env QUEUE_PREFIX="dev-" --env FLASK_ENV="development" --env REDIS_URL=<redis_url> --net="host" --name door43_enqueue_job --rm door43_enqueue_job
 
 
 # NOTE: To run the container in production use with the desired values:
-# 	docker run --env GRAPHITE_URL=<graphite_url> --env REDIS_URL=<redis_url> --net="host" --name door43_enqueuejob --rm door43_enqueuejob
+# 	docker run --env GRAPHITE_URL=<graphite_url> --env REDIS_URL=<redis_url> --net="host" --name door43_enqueue_job --rm door43_enqueue_job
