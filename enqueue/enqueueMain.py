@@ -118,8 +118,9 @@ def job_receiver():
         else:
             stats_client.incr('InvalidPostsReceived')
             return f'{OUR_NAME} ignored invalid payload with {data_dict}', 400
-    else: # should never happen
-        return f'This is a {OUR_NAME} webhook receiver only.'
+    # NOTE: Code below is not required because rq automatically returns a "Method Not Allowed" error for a GET, etc.
+    #else: # should never happen
+        #return f'This is a {OUR_NAME} webhook receiver only.'
 # end of job_receiver()
 
 
