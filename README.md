@@ -76,19 +76,40 @@ processed.
 The Python code is run in Flask, which is then served by Green Unicorn (gunicorn)
 but with nginx facing the outside world.
 
-## Deploymemt
+## Deployment
 
 Travis-CI is hooked to from GitHub to automatically test commits to both the `develop`
 and `master` branches, and on success, to build containers (tagged with those branch names)
 that are pushed to [DockerHub](https://hub.docker.com/u/unfoldingword/).
 
 ```
-To test the container use:
- 	docker run --env QUEUE_PREFIX="dev-" --env FLASK_ENV="development" --env REDIS_URL=<redis_url> --net="host" --name door43_enqueuejob --rm door43_enqueuejob
+To fetch the container use something like:
+    docker pull --all-tags unfoldingword/door43_enqueue_job
+or
+    docker pull unfoldingword/door43_enqueue_job:develop
 
+To view downloaded images and their tags:
+    docker images
+
+To test the container use:
+    docker run --env QUEUE_PREFIX="dev-" --env FLASK_ENV="development" --env REDIS_URL=<redis_url> --net="host" --name dev-door43_enqueue_job --rm unfoldingword/door43_enqueue_job:develop
+
+and optionally also including the Graphite url:
+    docker run --env QUEUE_PREFIX="dev-" --env FLASK_ENV="development" --env REDIS_URL=<redis_url> --env GRAPHITE_URL=<graphite_url> --net="host" --name dev-door43_enqueue_job --rm unfoldingword/door43_enqueue_job:develop
+
+NOTE: --rm automatically removes the container from the docker daemon when it exits
+            (it doesn't delete the pulled image)
 
 To run the container in production use with the desired values:
- 	docker run --env GRAPHITE_URL=<graphite_url> --env REDIS_URL=<redis_url> --net="host" --name door43_enqueuejob --rm door43_enqueuejob
+    docker run --env GRAPHITE_URL=<graphite_url> --env REDIS_URL=<redis_url> --net="host" --name door43_enqueue_job --detach --rm unfoldingword/door43_enqueue_job:master
+
+Running containers can be viewed with (or append --all to see all containers):
+    docker ps
+
+The container can be stopped with a command like:
+    docker stop dev-door43_enqueue_job
+or using the full container name:
+    docker stop unfoldingword/door_43_enqueue_job:develop
 ```
 
 The production container will be deployed to the unfoldingWord AWS EC2 instance, where
