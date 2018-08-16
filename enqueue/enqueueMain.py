@@ -1,6 +1,8 @@
 # Adapted by RJH June 2018 from fork of https://github.com/lscsoft/webhook-queue (Public Domain / unlicense.org)
 #   The main change was to add some vetting of the json payload before allowing the job to be queued.
 
+# TODO: We don't currently have any way to clear the failed queue
+
 # Python imports
 from os import getenv
 
@@ -16,7 +18,7 @@ from check_posted_payload import check_posted_payload
 
 OUR_NAME = 'Door43_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
 WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
-JOB_TIMEOUT = '200s' # Then job will be considered to have failed
+JOB_TIMEOUT = '200s' # Then a running job (taken out of the queue) will be considered to have failed
 
 
 # Look at relevant environment variables
@@ -101,6 +103,7 @@ def job_receiver():
             len_failed_q = len(failed_q)
             stats_client.gauge('FailedQueueLength', len_failed_q)
             # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
+            #           (For now at least, we prefer them to just stay in the queue if they're not getting processed.)
             #       The timeout value determines the max run time of the worker once the job is accessed
             q.enqueue('webhook.job', data_dict, timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
             # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
