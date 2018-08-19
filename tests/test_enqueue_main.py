@@ -15,13 +15,13 @@ client = app.test_client()
 
 class TestEnqueueMain(TestCase):
 
-
-    def test_index(self):
-        response = client.get('/')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers['Content-Type'], 'text/html; charset=utf-8' )
-        expected = f'This {OUR_NAME} webhook service runs from http://localhost/{WEBHOOK_URL_SEGMENT}'
-        self.assertEqual(response.data, expected.encode())
+    # NOTE: the GET at '/' has been removed from enqueue
+    #def test_index(self):
+        #response = client.get('/')
+        #self.assertEqual(response.status_code, 200)
+        #self.assertEqual(response.headers['Content-Type'], 'text/html; charset=utf-8' )
+        #expected = f'This {OUR_NAME} webhook service runs from http://localhost/{WEBHOOK_URL_SEGMENT}'
+        #self.assertEqual(response.data, expected.encode())
 
     def test_invalid_url(self):
         response = client.get('/whatever/')

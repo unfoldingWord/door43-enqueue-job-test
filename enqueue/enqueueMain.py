@@ -18,7 +18,8 @@ from statsd import StatsClient # Graphite front-end
 from check_posted_payload import check_posted_payload
 
 OUR_NAME = 'Door43_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
-WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
+#WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
+WEBHOOK_URL_SEGMENT = '' # Leaving this blank will cause the service to run at '/'
 JOB_TIMEOUT = '200s' # Then a running job (taken out of the queue) will be considered to have failed
 
 
@@ -38,14 +39,14 @@ stats_client = StatsClient(host=graphite_url, port=8125, prefix=our_adjusted_nam
 app = Flask(__name__)
 
 
-# This code should never be executed in the real world and presumably can be removed
-@app.route('/', methods=['GET'])
-def index():
-    """
-    Display a helpful message to a user connecting to our root URL.
-    """
-    return f'This {OUR_NAME} webhook service runs from {request.url}{WEBHOOK_URL_SEGMENT}'
-# end of index()
+## This code should never be executed in the real world and presumably can be removed
+#@app.route('/', methods=['GET'])
+#def index():
+    #"""
+    #Display a helpful message to a user connecting to our root URL.
+    #"""
+    #return f'This {OUR_NAME} webhook service runs from {request.url}{WEBHOOK_URL_SEGMENT}'
+## end of index()
 
 
 # This code is for debugging only and can be removed
