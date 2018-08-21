@@ -8,7 +8,9 @@ language: python
 # See available versions at https://docs.travis-ci.com/user/languages/python/
 python:
   - '3.6'
-  - '3.7-dev'
+  - '3.7'
+  - '3.8-dev'
+  - 'nightly'
 
 services:
   - docker
