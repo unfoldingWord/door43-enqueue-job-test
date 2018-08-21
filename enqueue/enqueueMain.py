@@ -25,6 +25,8 @@ JOB_TIMEOUT = '200s' # Then a running job (taken out of the queue) will be consi
 
 # Look at relevant environment variables
 prefix = getenv('QUEUE_PREFIX', '') # Gets (optional) QUEUE_PREFIX environment variable -- set to 'dev-' for development
+if prefix not in ('', 'dev-'):
+    print(f"Unexpected prefix: {prefix!r} -- expected '' or 'dev-'")
 our_adjusted_name = prefix + OUR_NAME
 
 # Get the redis URL from the environment, otherwise use a local test instance
@@ -50,7 +52,7 @@ app = Flask(__name__)
 
 
 # This code is for debugging only and can be removed
-@app.route('/showDB/', methods=['GET'])
+@app.route(f'/{prefix}showDB/', methods=['GET'])
 def showDB():
     """
     Display a helpful status list to a user connecting to our debug URL.
@@ -84,6 +86,7 @@ def showDB():
 # end of showDB()
 
 
+# This is the main workhorse part of this code
 @app.route('/'+WEBHOOK_URL_SEGMENT, methods=['POST'])
 def job_receiver():
     """
