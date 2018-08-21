@@ -45,16 +45,14 @@ Set environment variables:
 
 To try Python code in Flask:
     make runFlask
-    (then view at http://127.0.0.1:5000/
-        but can't send data to http://127.0.0.1:5000/client/webhook/
-        or view debugging info at http://127.0.0.1:5000/showDB/
+    (then can post data to http://127.0.0.1:5000/
+        or view debugging info at http://127.0.0.1:5000/dev-showDB/
         if there is no redis instance running)
 
 To run (using Flask and gunicorn and nginx, plus redis) in three docker containers:
     make composeEnqueueRedis
-    (then view at http://127.0.0.1:8080/
-        send json payload data to http://127.0.0.1:8080/client/webhook/
-        and view debugging info at http://127.0.0.1:8080/showDB/)
+    (then send json payload data to http://127.0.0.1:8080/
+        and view debugging info at http://127.0.0.1:8080/dev-showDB/)
 
 To build a docker image:
     (requires environment variable DOCKER_USERNAME to be set)
@@ -66,8 +64,7 @@ To push the image to docker hub:
 ```
 
 Basically this small program collects the json payload from the DCS (Door43
-Content Service) which connects to the `.../client/webhook/` URL. (Notice the
-trailing slash.)
+Content Service) which connects to the `/` URL.)
 
 This enqueue process checks for various fields for simple validation of the
 payload, and then puts the job onto a (rq) queue (stored in redis) to be
