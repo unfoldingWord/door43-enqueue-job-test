@@ -1,5 +1,7 @@
 # NOTE: This docker container is built automatically
 #       by the Docker Compose in the enclosing folder
+# It's also built automatically from Travis-CI
+#       after passing unit tests
 
 FROM python:alpine
 

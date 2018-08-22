@@ -1,5 +1,7 @@
 # NOTE: This docker container is built automatically
 #       by the Docker Compose in the enclosing folder
+# It's also built automatically from Travis-CI
+#       after passing unit tests
 
 FROM python:alpine
 
@@ -20,4 +22,5 @@ ENV DEBUG_MODE True
 #   REDIS_URL (optional -- defaults to 'redis')
 #   GRAPHITE_URL (optional -- defaults to 'localhost')
 
+# TODO: Will need to change this port number for this developBranch
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "enqueueMain:app"]
