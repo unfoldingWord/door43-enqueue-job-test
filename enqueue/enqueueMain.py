@@ -14,9 +14,13 @@ from redis import StrictRedis
 from rq import Queue
 from datetime import datetime
 from statsd import StatsClient # Graphite front-end
+import sys
+import logging
 
 # Local imports
 from check_posted_payload import check_posted_payload
+
+print(f"enqueueMain.py running on Python version {sys.version}")
 
 OUR_NAME = 'Door43_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
 #WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
@@ -27,7 +31,7 @@ JOB_TIMEOUT = '200s' # Then a running job (taken out of the queue) will be consi
 # Look at relevant environment variables
 prefix = getenv('QUEUE_PREFIX', '') # Gets (optional) QUEUE_PREFIX environment variable -- set to 'dev-' for development
 if prefix not in ('', 'dev-'):
-    print(f"Unexpected prefix: {prefix!r} -- expected '' or 'dev-'")
+    logging.critical(f"Unexpected prefix: {prefix!r} -- expected '' or 'dev-'")
 our_adjusted_name = prefix + OUR_NAME
 
 # Get the redis URL from the environment, otherwise use a local test instance
