@@ -25,7 +25,8 @@ print(f"enqueueMain.py running on Python version {sys.version}")
 OUR_NAME = 'Door43_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
 #WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
 WEBHOOK_URL_SEGMENT = '' # Leaving this blank will cause the service to run at '/'
-JOB_TIMEOUT = '200s' # Then a running job (taken out of the queue) will be considered to have failed
+JOB_TIMEOUT = '2000s' # Then a running job (taken out of the queue) will be considered to have failed
+    # 200s was enough time for OBS, but not for a USFM Bible it seems
 
 
 # Look at relevant environment variables
