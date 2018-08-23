@@ -21,4 +21,5 @@ EXPOSE 8000
 #   REDIS_URL (optional -- defaults to 'redis')
 #   GRAPHITE_URL (optional -- defaults to 'localhost')
 
+# NOTE: masterBranch listens on 8000 (develop on 8001)
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "enqueueMain:app"]
