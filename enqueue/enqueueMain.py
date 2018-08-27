@@ -2,29 +2,31 @@
 #   The main change was to add some vetting of the json payload before allowing the job to be queued.
 
 # TODO: We don't currently have any way to clear the failed queue
-# TODO: We need to make the prefixed version listen on a different port
 
 # Python imports
 from os import getenv
+import sys
+from datetime import datetime
+import logging
 
 # Library (PyPi) imports
 from flask import Flask, request
 # NOTE: We use StrictRedis() because we don't need the backwards compatibility of Redis()
 from redis import StrictRedis
 from rq import Queue
-from datetime import datetime
 from statsd import StatsClient # Graphite front-end
-import sys
-import logging
 
 # Local imports
 from check_posted_payload import check_posted_payload
 
+
 print(f"enqueueMain.py running on Python version {sys.version}")
 
 OUR_NAME = 'Door43_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
+
 #WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
 WEBHOOK_URL_SEGMENT = '' # Leaving this blank will cause the service to run at '/'
+
 JOB_TIMEOUT = '200s' # Then a running job (taken out of the queue) will be considered to have failed
     # NOTE: This is only the time until webhook.py returns after submitting the jobs
     #           -- the actual conversion jobs might still be running.
@@ -35,12 +37,13 @@ prefix = getenv('QUEUE_PREFIX', '') # Gets (optional) QUEUE_PREFIX environment v
 if prefix not in ('', 'dev-'):
     logging.critical(f"Unexpected prefix: {prefix!r} -- expected '' or 'dev-'")
 our_adjusted_name = prefix + OUR_NAME
+# NOTE: The prefixed version must also listen at a different port (specified in gunicorn run command)
 
 # Get the redis URL from the environment, otherwise use a local test instance
 redis_hostname = getenv('REDIS_HOSTNAME', 'redis')
 
 # Get the Graphite URL from the environment, otherwise use a local test instance
-graphite_url = getenv('GRAPHITE_HOSTNAME','localhost')
+graphite_url = getenv('GRAPHITE_HOSTNAME', 'localhost')
 stats_client = StatsClient(host=graphite_url, port=8125, prefix=our_adjusted_name)
 
 
@@ -59,13 +62,13 @@ app = Flask(__name__)
 
 
 # This code is for debugging only and can be removed
-@app.route(f'/{prefix}showDB/', methods=['GET'])
-def showDB():
+@app.route('/showDB/', methods=['GET'])
+def show_DB():
     """
     Display a helpful status list to a user connecting to our debug URL.
     """
     r = StrictRedis(host=redis_hostname)
-    result_string = f'This {OUR_NAME} webhook enqueuing service has:'
+    result_string = f'This {OUR_NAME} enqueuing service has:'
 
     # Look at environment variables
     result_string += '<h1>Environment Variables</h1>'
@@ -90,7 +93,7 @@ def showDB():
         result_string += f'<h1>All keys ({len(r.keys())}):</h1>{keys_output_string}'
 
     return result_string
-# end of showDB()
+# end of show_DB()
 
 
 # This is the main workhorse part of this code
@@ -122,8 +125,9 @@ def job_receiver():
             if prefix:
                 other_our_adjusted_name = OUR_NAME if prefix else 'dev-'+OUR_NAME
                 other_q = Queue(other_our_adjusted_name, connection=StrictRedis(host=redis_hostname))
-                return f'{OUR_NAME} queued valid job to {our_adjusted_name} ({len(q)} jobs now, {len(other_q)} jobs in {other_our_adjusted_name} queue, ' \
-                                                                      f'{len_failed_q} failed jobs) at {datetime.utcnow()}'
+                return f'{OUR_NAME} queued valid job to {our_adjusted_name} ({len(q)} jobs now, ' \
+                            f'{len(other_q)} jobs in {other_our_adjusted_name} queue, ' \
+                            f'{len_failed_q} failed jobs) at {datetime.utcnow()}'
             else: #production mode
                 return f'{OUR_NAME} queued valid job to {our_adjusted_name} at {datetime.utcnow()}'
         else:

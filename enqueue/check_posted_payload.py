@@ -41,7 +41,7 @@ def check_posted_payload(request):
     # Bail if the commit branch is not the default branch
     try:
         commit_branch = payload_json['ref'].split('/')[2]
-    except (IndexError,AttributeError):
+    except (IndexError, AttributeError):
         return False, {'error': 'Could not determine commit branch.'}
     except KeyError:
         return False, {'error': 'No commit branch specified.'}
