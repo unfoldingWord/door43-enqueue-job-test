@@ -73,6 +73,13 @@ processed.
 The Python code is run in Flask, which is then served by Green Unicorn (gunicorn)
 but with nginx facing the outside world.
 
+## Testing
+
+Use `make composeEnqueueRedis` as above.
+The door43_job_handler also needs to be running.
+Use a command like `curl -v http://127.0.0.1:8080/ -d @<path-to>/payload.json --header "Content-Type: application/json" --header "X-Gogs-Event: push"` to queue a job, and if successful, you should receive a response like `Door43_webhook queued valid job to dev-Door43_webhook (0 jobs now, 0 jobs in Door43_webhook queue, 5 failed jobs) at 2018-08-27 07:34`.
+
+
 ## Deployment
 
 Travis-CI is hooked to from GitHub to automatically test commits to both the `develop`
