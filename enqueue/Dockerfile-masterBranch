@@ -15,11 +15,12 @@ EXPOSE 8000
 
 # Define environment variables
 # (none defined here -- define them in the docker run command)
-# NOTE: The following environment variables can be set:
+# NOTE: The following environment variables must be set:
+#   REDIS_URL (defaults to 'redis')
+#   GRAPHITE_URL (defaults to 'localhost')
+# The following two are optional:
 #	QUEUE_PREFIX dev- (optional -- defaults to empty string)
 #	DEBUG_MODE True (optional -- defaults to False)
-#   REDIS_URL (optional -- defaults to 'redis')
-#   GRAPHITE_URL (optional -- defaults to 'localhost')
 
-# NOTE: masterBranch listens on 8000 (develop on 8001)
+# NOTE: this masterBranch listens on 8000 (develop on 8001)
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "enqueueMain:app"]
