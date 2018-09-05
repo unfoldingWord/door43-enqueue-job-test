@@ -27,16 +27,17 @@ class TestEnqueueMain(TestCase):
         response = client.get('/whatever/')
         self.assertEqual(response.status_code, 404)
 
-    def test_showDB_get(self):
-        # TODO: Can we run a local redis instance for these tests?
-        if redis_hostname == 'redis': # Using a (missing) local instance so won't work work
-            with self.assertRaises(redis_exceptions.ConnectionError):
-                response = client.get('/showDB/')
-        else: # non-local  instance of redis so it should all work and we should get a page back
-            response = client.get('/showDB/')
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.headers['Content-Type'], 'text/html; charset=utf-8' )
-            self.assertGreater(response.headers['Content-Length'], 200 )
+    # This code was deleted from enqueue
+    #def test_showDB_get(self):
+        ## TODO: Can we run a local redis instance for these tests?
+        #if redis_hostname == 'redis': # Using a (missing) local instance so won't work work
+            #with self.assertRaises(redis_exceptions.ConnectionError):
+                #response = client.get('/showDB/')
+        #else: # non-local  instance of redis so it should all work and we should get a page back
+            #response = client.get('/showDB/')
+            #self.assertEqual(response.status_code, 200)
+            #self.assertEqual(response.headers['Content-Type'], 'text/html; charset=utf-8' )
+            #self.assertGreater(response.headers['Content-Length'], 200 )
 
     def test_invalid_webhook_get(self):
         response = client.get('/'+WEBHOOK_URL_SEGMENT)
