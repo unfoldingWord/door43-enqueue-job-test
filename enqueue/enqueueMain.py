@@ -20,7 +20,8 @@ from statsd import StatsClient # Graphite front-end
 from check_posted_payload import check_posted_payload
 
 
-print(f"enqueueMain.py running on Python version {sys.version}")
+logging.basicConfig(level=logging.DEBUG)
+logging.info(f"enqueueMain.py running on Python version {sys.version}")
 
 OUR_NAME = 'Door43_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
 
@@ -41,9 +42,11 @@ our_adjusted_name = prefix + OUR_NAME
 
 # Get the redis URL from the environment, otherwise use a local test instance
 redis_hostname = getenv('REDIS_HOSTNAME', 'redis')
+logging.info(f"redis_hostname is {redis_hostname!r}")
 
 # Get the Graphite URL from the environment, otherwise use a local test instance
 graphite_url = getenv('GRAPHITE_HOSTNAME', 'localhost')
+logging.info(f"graphite_url is {graphite_url!r}")
 stats_client = StatsClient(host=graphite_url, port=8125, prefix=our_adjusted_name)
 
 
@@ -51,49 +54,39 @@ stats_client = StatsClient(host=graphite_url, port=8125, prefix=our_adjusted_nam
 app = Flask(__name__)
 
 
-## This code should never be executed in the real world and presumably can be removed
-#@app.route('/', methods=['GET'])
-#def index():
+## This code is for debugging only and can be removed
+#@app.route('/showDB/', methods=['GET'])
+#def show_DB():
     #"""
-    #Display a helpful message to a user connecting to our root URL.
+    #Display a helpful status list to a user connecting to our debug URL.
     #"""
-    #return f'This {OUR_NAME} webhook service runs from {request.url}{WEBHOOK_URL_SEGMENT}'
-## end of index()
+    #r = StrictRedis(host=redis_hostname)
+    #result_string = f'This {OUR_NAME} enqueuing service has:'
 
+    ## Look at environment variables
+    #result_string += '<h1>Environment Variables</h1>'
+    #result_string += f"<p>QUEUE_PREFIX={getenv('QUEUE_PREFIX', '(not set)=>(no prefix)')}</p>"
+    #result_string += f"<p>FLASK_ENV={getenv('FLASK_ENV', '(not set)=>(normal/production)')}</p>"
+    #result_string += f"<p>REDIS_HOSTNAME={getenv('REDIS_HOSTNAME', '(not set)=>redis')}</p>"
+    #result_string += f"<p>GRAPHITE_HOSTNAME={getenv('GRAPHITE_HOSTNAME', '(not set)=>localhost')}</p>"
 
-# This code is for debugging only and can be removed
-@app.route('/showDB/', methods=['GET'])
-def show_DB():
-    """
-    Display a helpful status list to a user connecting to our debug URL.
-    """
-    r = StrictRedis(host=redis_hostname)
-    result_string = f'This {OUR_NAME} enqueuing service has:'
+    ## Look at all the potential queues
+    #for this_our_adjusted_name in (OUR_NAME, 'dev-'+OUR_NAME, 'failed'):
+        #q = Queue(this_our_adjusted_name, connection=r)
+        #queue_output_string = ''
+        ##queue_output_string += '<p>Job IDs ({0}): {1}</p>'.format(len(q.job_ids), q.job_ids)
+        #queue_output_string += f'<p>Jobs ({len(q.jobs)}): {q.jobs}</p>'
+        #result_string += f'<h1>{this_our_adjusted_name} queue:</h1>{queue_output_string}'
 
-    # Look at environment variables
-    result_string += '<h1>Environment Variables</h1>'
-    result_string += f"<p>QUEUE_PREFIX={getenv('QUEUE_PREFIX', '(not set)=>(no prefix)')}</p>"
-    result_string += f"<p>FLASK_ENV={getenv('FLASK_ENV', '(not set)=>(normal/production)')}</p>"
-    result_string += f"<p>REDIS_HOSTNAME={getenv('REDIS_HOSTNAME', '(not set)=>redis')}</p>"
-    result_string += f"<p>GRAPHITE_HOSTNAME={getenv('GRAPHITE_HOSTNAME', '(not set)=>localhost')}</p>"
+    #if redis_hostname == 'redis': # Can't do this for production redis (too many keys!!!)
+        ## Look at the raw keys
+        #keys_output_string = ''
+        #for key in r.scan_iter():
+            #keys_output_string += '<p>' + key.decode() + '</p>\n'
+        #result_string += f'<h1>All keys ({len(r.keys())}):</h1>{keys_output_string}'
 
-    # Look at all the potential queues
-    for this_our_adjusted_name in (OUR_NAME, 'dev-'+OUR_NAME, 'failed'):
-        q = Queue(this_our_adjusted_name, connection=r)
-        queue_output_string = ''
-        #queue_output_string += '<p>Job IDs ({0}): {1}</p>'.format(len(q.job_ids), q.job_ids)
-        queue_output_string += f'<p>Jobs ({len(q.jobs)}): {q.jobs}</p>'
-        result_string += f'<h1>{this_our_adjusted_name} queue:</h1>{queue_output_string}'
-
-    if redis_hostname == 'redis': # Can't do this for production redis (too many keys!!!)
-        # Look at the raw keys
-        keys_output_string = ''
-        for key in r.scan_iter():
-            keys_output_string += '<p>' + key.decode() + '</p>\n'
-        result_string += f'<h1>All keys ({len(r.keys())}):</h1>{keys_output_string}'
-
-    return result_string
-# end of show_DB()
+    #return result_string
+## end of show_DB()
 
 
 # This is the main workhorse part of this code
@@ -122,17 +115,19 @@ def job_receiver():
             #       The timeout value determines the max run time of the worker once the job is accessed
             q.enqueue('webhook.job', data_dict, timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
             # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
-            if prefix:
-                other_our_adjusted_name = OUR_NAME if prefix else 'dev-'+OUR_NAME
-                other_q = Queue(other_our_adjusted_name, connection=StrictRedis(host=redis_hostname))
-                return f'{OUR_NAME} queued valid job to {our_adjusted_name} ({len(q)} jobs now, ' \
-                            f'{len(other_q)} jobs in {other_our_adjusted_name} queue, ' \
-                            f'{len_failed_q} failed jobs) at {datetime.utcnow()}'
-            else: #production mode
-                return f'{OUR_NAME} queued valid job to {our_adjusted_name} at {datetime.utcnow()}'
+
+            other_our_adjusted_name = OUR_NAME if prefix else 'dev-'+OUR_NAME
+            other_q = Queue(other_our_adjusted_name, connection=StrictRedis(host=redis_hostname))
+            info_message = f'{OUR_NAME} queued valid job to {our_adjusted_name} ({len(q)} jobs now, ' \
+                        f'{len(other_q)} jobs in {other_our_adjusted_name} queue, ' \
+                        f'{len_failed_q} failed jobs) at {datetime.utcnow()}'
+            logging.info(info_message)
+            return f'{OUR_NAME} queued valid job to {our_adjusted_name} at {datetime.utcnow()}'
         else:
             stats_client.incr('InvalidPostsReceived')
-            return f'{OUR_NAME} ignored invalid payload with {data_dict}', 400
+            error_message = f'{OUR_NAME} ignored invalid payload with {data_dict}'
+            logging.error(error_message)
+            return error_message, 400
     # NOTE: Code below is not required because rq automatically returns a "Method Not Allowed" error for a GET, etc.
     #else: # should never happen
         #return f'This is a {OUR_NAME} webhook receiver only.'
