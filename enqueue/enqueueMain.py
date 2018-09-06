@@ -20,9 +20,6 @@ from statsd import StatsClient # Graphite front-end
 from check_posted_payload import check_posted_payload
 
 
-logging.basicConfig(level=logging.DEBUG)
-logging.info(f"enqueueMain.py running on Python version {sys.version}")
-
 OUR_NAME = 'Door43_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
 
 #WEBHOOK_URL_SEGMENT = 'client/webhook/' # Note that there is compulsory trailing slash
@@ -39,6 +36,10 @@ if prefix not in ('', 'dev-'):
     logging.critical(f"Unexpected prefix: {prefix!r} -- expected '' or 'dev-'")
 our_adjusted_name = prefix + OUR_NAME
 # NOTE: The prefixed version must also listen at a different port (specified in gunicorn run command)
+
+logging.basicConfig(level=logging.DEBUG if prefix else logging.ERROR)
+prefix_string = f" with prefix {prefix!r}" if prefix else ""
+logging.info(f"enqueueMain.py running on Python version {sys.version}{prefix_string}")
 
 # Get the redis URL from the environment, otherwise use a local test instance
 redis_hostname = getenv('REDIS_HOSTNAME', 'redis')
@@ -100,32 +101,34 @@ def job_receiver():
     """
     if request.method == 'POST':
         stats_client.incr('TotalPostsReceived')
-        response_ok, data_dict = check_posted_payload(request) # data_dict is json payload if successful, else error info
-        if response_ok:
+        logging.info(f"Enqueue received request: {request}")
+        response_ok_flag, response_dict = check_posted_payload(request) # response_dict is json payload if successful, else error info
+
+        if response_ok_flag:
             stats_client.incr('GoodPostsReceived')
-            r = StrictRedis(host=redis_hostname)
-            q = Queue(our_adjusted_name, connection=r)
-            len_q = len(q)
+            redis_object = StrictRedis(host=redis_hostname)
+            queue_object = Queue(our_adjusted_name, connection=redis_object)
+            len_q = len(queue_object)
             stats_client.gauge(prefix+'QueueLength', len_q)
-            failed_q = Queue('failed', connection=r)
+            failed_q = Queue('failed', connection=redis_object)
             len_failed_q = len(failed_q)
             stats_client.gauge('FailedQueueLength', len_failed_q)
             # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
             #           (For now at least, we prefer them to just stay in the queue if they're not getting processed.)
             #       The timeout value determines the max run time of the worker once the job is accessed
-            q.enqueue('webhook.job', data_dict, timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
+            queue_object.enqueue('webhook.job', response_dict, timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
             # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
 
             other_our_adjusted_name = OUR_NAME if prefix else 'dev-'+OUR_NAME
             other_q = Queue(other_our_adjusted_name, connection=StrictRedis(host=redis_hostname))
-            info_message = f'{OUR_NAME} queued valid job to {our_adjusted_name} ({len(q)} jobs now, ' \
+            info_message = f'{OUR_NAME} queued valid job to {our_adjusted_name} ({len(queue_object)} jobs now, ' \
                         f'{len(other_q)} jobs in {other_our_adjusted_name} queue, ' \
                         f'{len_failed_q} failed jobs) at {datetime.utcnow()}'
             logging.info(info_message)
             return f'{OUR_NAME} queued valid job to {our_adjusted_name} at {datetime.utcnow()}'
         else:
             stats_client.incr('InvalidPostsReceived')
-            error_message = f'{OUR_NAME} ignored invalid payload with {data_dict}'
+            error_message = f'{OUR_NAME} ignored invalid payload; responding with {response_dict}'
             logging.error(error_message)
             return error_message, 400
     # NOTE: Code below is not required because rq automatically returns a "Method Not Allowed" error for a GET, etc.

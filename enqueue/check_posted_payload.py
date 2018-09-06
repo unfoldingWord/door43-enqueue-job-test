@@ -16,7 +16,7 @@ def check_posted_payload(request):
     """
     # Bail if this is not a POST with a payload
     if not request.data:
-        logging.error("No payload found")
+        logging.error("Received request but no payload found")
         return False, {'error': 'No payload found. You must submit a POST request via a DCS webhook notification'}
 
     # Bail if this is not from DCS

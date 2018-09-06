@@ -47,7 +47,7 @@ class TestEnqueueMain(TestCase):
         response = client.post('/'+WEBHOOK_URL_SEGMENT)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.headers['Content-Type'], 'text/html; charset=utf-8' )
-        expected = "Door43_webhook ignored invalid payload with {'error': 'No payload found. You must submit a POST request via a DCS webhook notification'}"
+        expected = "Door43_webhook ignored invalid payload; responding with {'error': 'No payload found. You must submit a POST request via a DCS webhook notification'}"
         self.assertEqual(response.data, expected.encode())
 
     def test_webhook_with_bad_headers(self):
@@ -56,7 +56,7 @@ class TestEnqueueMain(TestCase):
         response = client.post('/'+WEBHOOK_URL_SEGMENT, data=json.dumps(payload_json), headers=headers)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.headers['Content-Type'], 'text/html; charset=utf-8' )
-        expected = "Door43_webhook ignored invalid payload with {'error': 'This does not appear to be from DCS.'}"
+        expected = "Door43_webhook ignored invalid payload; responding with {'error': 'This does not appear to be from DCS.'}"
         self.assertEqual(response.data, expected.encode())
 
     def test_webhook_with_bad_payload(self):
@@ -65,7 +65,7 @@ class TestEnqueueMain(TestCase):
         response = client.post('/'+WEBHOOK_URL_SEGMENT, data=json.dumps(payload_json), headers=headers)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.headers['Content-Type'], 'text/html; charset=utf-8' )
-        expected = "Door43_webhook ignored invalid payload with {'error': 'No repo URL specified.'}"
+        expected = "Door43_webhook ignored invalid payload; responding with {'error': 'No repo URL specified.'}"
         self.assertEqual(response.data, expected.encode())
 
     def test_webhook_with_minimal_json_payload(self):
