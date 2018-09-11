@@ -39,7 +39,7 @@ our_adjusted_name = prefix + OUR_NAME
 
 logging.basicConfig(level=logging.DEBUG if prefix else logging.ERROR)
 prefix_string = f" with prefix {prefix!r}" if prefix else ""
-logging.info(f"enqueueMain.py running on Python version {sys.version}{prefix_string}")
+logging.info(f"enqueueMain.py running on Python v{sys.version}{prefix_string}")
 
 # Get the redis URL from the environment, otherwise use a local test instance
 redis_hostname = getenv('REDIS_HOSTNAME', 'redis')
