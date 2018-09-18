@@ -18,12 +18,14 @@ Also added Graphite stats collection (using statsd package)
 and viewable with Grafana.
 
 Basically this small program collects the json payload from the DCS (Door43
-Content Service) which connects to the `.../client/webhook/` URL. (Notice the
-trailing slash.)
+Content Service) which connects to the `/` URL.
 
 This enqueue process checks for various fields for simple validation of the
 payload, and then puts the job onto a (rq) queue (stored in redis) to be
 processed.
+
+There is also a callback service connected to the `tx-callback/` URL. (Notice the
+trailing slash.) Callback jobs are placed onto a different queue.
 
 The Python code is run in Flask, which is then served by Green Unicorn (gunicorn).
 A nginx instance is expected to face the outside world.

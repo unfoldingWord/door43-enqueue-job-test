@@ -46,13 +46,11 @@ Set environment variables:
 To try Python code in Flask:
     make runFlask
     (then can post data to http://127.0.0.1:5000/
-        or view debugging info at http://127.0.0.1:5000/dev-showDB/
         if there is no redis instance running)
 
 To run (using Flask and gunicorn and nginx, plus redis) in three docker containers:
     make composeEnqueueRedis
-    (then send json payload data to http://127.0.0.1:8080/
-        and view debugging info at http://127.0.0.1:8080/dev-showDB/)
+    (then send json payload data to http://127.0.0.1:8080/)
 
 To build a docker image:
     (requires environment variable DOCKER_USERNAME to be set)
@@ -70,6 +68,9 @@ This enqueue process checks for various fields for simple validation of the
 payload, and then puts the job onto a (rq) queue (stored in redis) to be
 processed.
 
+There is also a callback service connected to the `tx-callback` URL.
+Callback jobs are placed onto a different queue.
+
 The Python code is run in Flask, which is then served by Green Unicorn (gunicorn)
 but with nginx facing the outside world.
 
@@ -77,7 +78,7 @@ but with nginx facing the outside world.
 
 Use `make composeEnqueueRedis` as above.
 The door43_job_handler also needs to be running.
-Use a command like `curl -v http://127.0.0.1:8080/ -d @<path-to>/payload.json --header "Content-Type: application/json" --header "X-Gogs-Event: push"` to queue a job, and if successful, you should receive a response like `Door43_webhook queued valid job to dev-Door43_webhook (0 jobs now, 0 jobs in Door43_webhook queue, 5 failed jobs) at 2018-08-27 07:34`.
+Use a command like `curl -v http://127.0.0.1:8080/ -d @<path-to>/payload.json --header "Content-Type: application/json" --header "X-Gogs-Event: push"` to queue a job, and if successful, you should receive a response like `Door43_webhook queued valid job to dev-Door43_webhook at 2018-08-27 07:34`.
 
 
 ## Deployment
@@ -113,7 +114,7 @@ Running containers can be viewed with (or append --all to see all containers):
 The container can be stopped with a command like:
     docker stop dev-door43_enqueue_job
 or using the full container name:
-    docker stop unfoldingword/door_43_enqueue_job:develop
+    docker stop unfoldingword/door43_enqueue_job:develop
 ```
 
 The production container will be deployed to the unfoldingWord AWS EC2 instance, where
