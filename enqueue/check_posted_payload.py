@@ -22,7 +22,7 @@ def check_posted_payload(request):
 
     # Bail if this is not from DCS
     if 'X-Gogs-Event' not in request.headers:
-        logging.error(f"Cannot find 'X-Gogs-Event' in {request.headers}")
+        logging.error(f"No 'X-Gogs-Event' in {request.headers}")
         return False, {'error': 'This does not appear to be from DCS.'}
 
     # Bail if this is not a push event
@@ -68,7 +68,7 @@ def check_posted_payload(request):
     #if not user:
         #raise Exception('Invalid DCS user token given in Payload')
 
-    logging.info("Payload seems ok")
+    logging.info("DCS payload seems ok")
     return True, payload_json
 # end of check_posted_payload
 
