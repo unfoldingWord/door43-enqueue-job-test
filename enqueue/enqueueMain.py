@@ -11,7 +11,7 @@ from datetime import datetime
 import logging
 
 # Library (PyPi) imports
-from flask import Flask, request
+from flask import Flask, request, jsonify
 # NOTE: We use StrictRedis() because we don't need the backwards compatibility of Redis()
 from redis import StrictRedis
 from rq import Queue, Worker
@@ -30,8 +30,9 @@ WEBHOOK_URL_SEGMENT = '' # Leaving this blank will cause the service to run at '
 CALLBACK_URL_SEGMENT = WEBHOOK_URL_SEGMENT + 'tx-callback/'
 
 JOB_TIMEOUT = '200s' # Then a running job (taken out of the queue) will be considered to have failed
-    # NOTE: This is only the time until webhook.py returns after submitting the jobs
+    # NOTE: This is only the time until webhook.py returns after submitting the job
     #           -- the actual conversion jobs might still be running.
+CALLBACK_TIMEOUT = '200s' # Then a running callback job (taken out of the queue) will be considered to have failed
 
 
 # Look at relevant environment variables
@@ -45,7 +46,7 @@ else:
     our_adjusted_name = OUR_NAME # Will become our main queue name
     other_our_adjusted_name = 'dev-'+OUR_NAME # The other queue name
 # NOTE: The prefixed version must also listen at a different port (specified in gunicorn run command)
-our_callback_name = our_adjusted_name + CALLBACK_SUFFIX
+our_adjusted_callback_name = our_adjusted_name + CALLBACK_SUFFIX
 other_our_adjusted_callback_name = other_our_adjusted_name + CALLBACK_SUFFIX
 
 
@@ -155,12 +156,16 @@ def job_receiver():
                             f'for {Worker.count(queue=other_queue)} workers, ' \
                         f'{len_failed_queue} failed jobs) at {datetime.utcnow()}'
             logging.info(info_message)
-            return f'{OUR_NAME} queued valid job to {our_adjusted_name} at {datetime.utcnow()}'
+            response_dict = {'success':'true',
+                             'status':'queued',
+                             'queue_name':our_adjusted_name,
+                             'queued_at':datetime.utcnow()}
+            return jsonify(response_dict)
         else:
             stats_client.incr('InvalidPostsReceived')
-            error_message = f'{OUR_NAME} ignored invalid payload; responding with {response_dict}'
-            logging.error(error_message)
-            return error_message, 400
+            response_dict['status'] = 'failed'
+            logging.error(f'{OUR_NAME} ignored invalid payload; responding with {response_dict}')
+            return jsonify(response_dict), 400
 # end of job_receiver()
 
 
@@ -170,7 +175,7 @@ def callback_receiver():
     Accepts POST requests and checks the (json) payload
 
     Queues the approved jobs at redis instance at global redis_hostname:6379.
-    Queue name is our_callback_name (may have been prefixed).
+    Queue name is our_adjusted_callback_name (may have been prefixed).
     """
     if request.method == 'POST':
         stats_client.incr('TotalCallbackPostsReceived')
@@ -181,7 +186,7 @@ def callback_receiver():
             # Collect (and log) some helpful information
             stats_client.incr('GoodCallbackPostsReceived')
             redis_connection = StrictRedis(host=redis_hostname)
-            our_queue = Queue(our_callback_name, connection=redis_connection)
+            our_queue = Queue(our_adjusted_callback_name, connection=redis_connection)
             len_our_queue = len(our_queue)
             stats_client.gauge(prefix+'QueueLength', len_our_queue)
             failed_queue = Queue('failed', connection=redis_connection)
@@ -190,7 +195,7 @@ def callback_receiver():
             # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
             #           (For now at least, we prefer them to just stay in the queue if they're not getting processed.)
             #       The timeout value determines the max run time of the worker once the job is accessed
-            our_queue.enqueue('callback.job', response_dict, timeout=JOB_TIMEOUT) # A function named callback.job will be called by the worker
+            our_queue.enqueue('callback.job', response_dict, timeout=CALLBACK_TIMEOUT) # A function named callback.job will be called by the worker
             # NOTE: The above line can return a result from the callback.job function. (By default, the result remains available for 500s.)
 
             other_callback_queue = Queue(other_our_adjusted_callback_name, connection=redis_connection)
@@ -198,25 +203,29 @@ def callback_receiver():
             #workers = Worker.all(connection=redis_connection) # Returns the actual worker objects
             #logging.debug(f"Total rq workers ({len(workers)}): {workers}")
             #our_queue_workers = Worker.all(queue=our_queue)
-            #logging.debug(f"Our {our_callback_name} queue workers ({len(our_queue_workers)}): {our_queue_workers}")
+            #logging.debug(f"Our {our_adjusted_callback_name} queue workers ({len(our_queue_workers)}): {our_queue_workers}")
 
             #worker_count = Worker.count(connection=redis_connection)
             #logging.debug(f"Total rq workers = {worker_count}")
             #our_queue_worker_count = Worker.count(queue=our_queue)
-            #logging.debug(f"Our {our_callback_name} queue workers = {our_queue_worker_count}")
+            #logging.debug(f"Our {our_adjusted_callback_name} queue workers = {our_queue_worker_count}")
 
-            info_message = f'{OUR_NAME} queued valid callback job to {our_callback_name} ' \
+            info_message = f'{OUR_NAME} queued valid callback job to {our_adjusted_callback_name} ' \
                         f'({len_our_queue} jobs now ' \
                             f'for {Worker.count(queue=our_queue)} workers, ' \
                         f'{len(other_callback_queue)} jobs in {other_our_adjusted_callback_name} queue ' \
                             f'for {Worker.count(queue=other_callback_queue)} workers, ' \
                         f'{len_failed_queue} failed jobs) at {datetime.utcnow()}'
             logging.info(info_message)
-            return f'{OUR_NAME} queued valid callback job to {our_callback_name} at {datetime.utcnow()}'
+            response_dict = {'success':'true',
+                             'status':'queued',
+                             'queue_name':our_adjusted_callback_name,
+                             'queued_at':datetime.utcnow()}
+            return jsonify(response_dict)
         else:
             stats_client.incr('InvalidCallbackPostsReceived')
-            error_message = f'{OUR_NAME} ignored invalid callback payload; responding with {response_dict}'
-            logging.error(error_message)
+            response_dict['status'] = 'failed'
+            logging.error(f'{OUR_NAME} ignored invalid callback payload; responding with {response_dict}')
             return error_message, 400
 # end of callback_receiver()
 
