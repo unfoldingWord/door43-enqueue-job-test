@@ -137,25 +137,26 @@ def job_receiver():
             our_queue.enqueue('webhook.job', response_dict, timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
             # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
 
-            other_queue = Queue(other_our_adjusted_name, connection=redis_connection)
-
+            # Find out who our workers are
             #workers = Worker.all(connection=redis_connection) # Returns the actual worker objects
             #logging.debug(f"Total rq workers ({len(workers)}): {workers}")
             #our_queue_workers = Worker.all(queue=our_queue)
             #logging.debug(f"Our {our_adjusted_name} queue workers ({len(our_queue_workers)}): {our_queue_workers}")
 
+            # Find out how many workers we have
             #worker_count = Worker.count(connection=redis_connection)
             #logging.debug(f"Total rq workers = {worker_count}")
             #our_queue_worker_count = Worker.count(queue=our_queue)
             #logging.debug(f"Our {our_adjusted_name} queue workers = {our_queue_worker_count}")
 
-            info_message = f'{OUR_NAME} queued valid job to {our_adjusted_name} ' \
+            other_queue = Queue(other_our_adjusted_name, connection=redis_connection)
+            logging.info(f'{OUR_NAME} queued valid job to {our_adjusted_name} ' \
                         f'({len_our_queue} jobs now ' \
                             f'for {Worker.count(queue=our_queue)} workers, ' \
                         f'{len(other_queue)} jobs in {other_our_adjusted_name} queue ' \
                             f'for {Worker.count(queue=other_queue)} workers, ' \
-                        f'{len_failed_queue} failed jobs) at {datetime.utcnow()}'
-            logging.info(info_message)
+                        f'{len_failed_queue} failed jobs) at {datetime.utcnow()}')
+
             response_dict = {'success':'true',
                              'status':'queued',
                              'queue_name':our_adjusted_name,
@@ -198,25 +199,26 @@ def callback_receiver():
             our_queue.enqueue('callback.job', response_dict, timeout=CALLBACK_TIMEOUT) # A function named callback.job will be called by the worker
             # NOTE: The above line can return a result from the callback.job function. (By default, the result remains available for 500s.)
 
-            other_callback_queue = Queue(other_our_adjusted_callback_name, connection=redis_connection)
-
+            # Find out who our workers are
             #workers = Worker.all(connection=redis_connection) # Returns the actual worker objects
             #logging.debug(f"Total rq workers ({len(workers)}): {workers}")
             #our_queue_workers = Worker.all(queue=our_queue)
             #logging.debug(f"Our {our_adjusted_callback_name} queue workers ({len(our_queue_workers)}): {our_queue_workers}")
 
+            # Find out how many workers we have
             #worker_count = Worker.count(connection=redis_connection)
             #logging.debug(f"Total rq workers = {worker_count}")
             #our_queue_worker_count = Worker.count(queue=our_queue)
             #logging.debug(f"Our {our_adjusted_callback_name} queue workers = {our_queue_worker_count}")
 
-            info_message = f'{OUR_NAME} queued valid callback job to {our_adjusted_callback_name} ' \
+            other_callback_queue = Queue(other_our_adjusted_callback_name, connection=redis_connection)
+            logging.info(f'{OUR_NAME} queued valid callback job to {our_adjusted_callback_name} ' \
                         f'({len_our_queue} jobs now ' \
                             f'for {Worker.count(queue=our_queue)} workers, ' \
                         f'{len(other_callback_queue)} jobs in {other_our_adjusted_callback_name} queue ' \
                             f'for {Worker.count(queue=other_callback_queue)} workers, ' \
-                        f'{len_failed_queue} failed jobs) at {datetime.utcnow()}'
-            logging.info(info_message)
+                        f'{len_failed_queue} failed jobs) at {datetime.utcnow()}')
+
             response_dict = {'success':'true',
                              'status':'queued',
                              'queue_name':our_adjusted_callback_name,
