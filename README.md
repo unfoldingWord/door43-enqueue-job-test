@@ -78,7 +78,7 @@ but with nginx facing the outside world.
 
 Use `make composeEnqueueRedis` as above.
 The door43_job_handler also needs to be running.
-Use a command like `curl -v http://127.0.0.1:8080/ -d @<path-to>/payload.json --header "Content-Type: application/json" --header "X-Gogs-Event: push"` to queue a job, and if successful, you should receive a response like `Door43_webhook queued valid job to dev-Door43_webhook at 2018-08-27 07:34`.
+Use a command like `curl -v http://127.0.0.1:8080/ -d @<path-to>/payload.json --header "Content-Type: application/json" --header "X-Gogs-Event: push"` to queue a job, and if successful, you should receive a JSON response.
 
 
 ## Deployment
@@ -125,8 +125,13 @@ The production container will be deployed to the unfoldingWord AWS EC2 instance,
 The next part in the Door43 workflow can be found in the [door43-job-handler](https://github.com/unfoldingWord-dev/door43-job-handler)
 repo. The job handler contains `webhook.py` (see below) which is given jobs
 that have been removed from the queue and then processes them -- adding them
-back to a `failed` queue if they give an exception or time-out. Note that the
-queue name here in `enqueueMain.py` must match the one in the job handler `rq_settings.py`.
+back to a `failed` queue if they give an exception or time-out.
+
+The `callback.py` module handles the callbacks from the tX (Translation Converter)
+and places them in a separate (higher priority) queue.
+
+Note that the queue names here in `enqueueMain.py` must match the ones
+in the Door43 job handler `rq_settings.py`.
 
 
 # The following is the initial (forked) README

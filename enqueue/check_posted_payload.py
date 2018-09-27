@@ -27,12 +27,11 @@ def check_posted_payload(request):
 
     # Bail if this is not a push event
     if not request.headers['X-Gogs-Event'] == 'push':
-        logging.error(f"X-Gogs-Event is not a push in {request.headers}")
+        logging.error(f"X-Gogs-Event {request.headers['X-Gogs-Event']!r} is not a push")
         return False, {'error': 'This does not appear to be a push.'}
 
     # Get the json payload and check it
     payload_json = request.get_json()
-    #print( repr(payload_json))
 
     # Bail if the URL to the repo is invalid
     try:

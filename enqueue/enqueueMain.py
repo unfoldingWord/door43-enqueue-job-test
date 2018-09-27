@@ -118,7 +118,7 @@ def job_receiver():
     """
     if request.method == 'POST':
         stats_client.incr('TotalPostsReceived')
-        logging.info(f"Enqueue received request: {request}")
+        logging.info(f"Door43 {'('+prefix+')' if prefix else ''} enqueue received request: {request}")
         response_ok_flag, response_dict = check_posted_payload(request) # response_dict is json payload if successful, else error info
 
         if response_ok_flag:
