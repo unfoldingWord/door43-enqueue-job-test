@@ -129,6 +129,13 @@ def job_receiver():
 
         our_queue = Queue(our_adjusted_name, connection=redis_connection)
 
+        # Collect and log some helpful information
+        len_our_queue = len(our_queue)
+        stats_client.gauge(prefix+'QueueLength', len_our_queue)
+        failed_queue = Queue('failed', connection=redis_connection)
+        len_failed_queue = len(failed_queue)
+        stats_client.gauge('FailedQueueLength', len_failed_queue)
+
         # Find out how many workers we have
         total_worker_count = Worker.count(connection=redis_connection)
         logging.debug(f"Total rq workers = {total_worker_count}")
@@ -136,20 +143,14 @@ def job_receiver():
         logging.debug(f"Our {our_adjusted_name} queue workers = {our_queue_worker_count}")
         stats_client.gauge(our_adjusted_name+'WorkersAvailable', our_queue_worker_count)
         if our_queue_worker_count < 1:
-            response_dict = {'error': 'No Door43 job handler workers available.',
-                             'status': 'failed'}
-            logging.error(f'{OUR_NAME} responding with 502: {response_dict}')
-            return jsonify(response_dict), 502 # Bad Gateway (or could do 503 Service Unavailable)
+            logging.critical(f'{our_adjusted_name} has no job handler workers running!')
+            # Go ahead and queue the job anyway for when a worker is restarted
 
         response_ok_flag, response_dict = check_posted_payload(request) # response_dict is json payload if successful, else error info
         if response_ok_flag:
-            # Collect (and log) some helpful information
+            logging.debug("Door43_job_receiver processing good payload...")
             stats_client.incr('GoodPostsReceived')
-            len_our_queue = len(our_queue)
-            stats_client.gauge(prefix+'QueueLength', len_our_queue)
-            failed_queue = Queue('failed', connection=redis_connection)
-            len_failed_queue = len(failed_queue)
-            stats_client.gauge('FailedQueueLength', len_failed_queue)
+
             # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
             #           (For now at least, we prefer them to just stay in the queue if they're not getting processed.)
             #       The timeout value determines the max run time of the worker once the job is accessed
@@ -162,6 +163,7 @@ def job_receiver():
             #our_queue_workers = Worker.all(queue=our_queue)
             #logging.debug(f"Our {our_adjusted_name} queue workers ({len(our_queue_workers)}): {our_queue_workers}")
 
+            len_our_queue = len(our_queue) # Update
             other_queue = Queue(other_our_adjusted_name, connection=redis_connection)
             logging.info(f'{OUR_NAME} queued valid job to {our_adjusted_name} ' \
                         f'({len_our_queue} jobs now ' \
@@ -195,16 +197,19 @@ def callback_receiver():
         stats_client.incr('TotalCallbackPostsReceived')
         logging.info(f"Enqueue received callback request: {request}")
 
+        # Collect (and log) some helpful information
+        our_queue = Queue(our_adjusted_callback_name, connection=redis_connection)
+        len_our_queue = len(our_queue)
+        stats_client.gauge(prefix+'QueueLength', len_our_queue)
+        failed_queue = Queue('failed', connection=redis_connection)
+        len_failed_queue = len(failed_queue)
+        stats_client.gauge('FailedQueueLength', len_failed_queue)
+
         response_ok_flag, response_dict = check_posted_callback_payload(request) # response_dict is json payload if successful, else error info
         if response_ok_flag:
-            # Collect (and log) some helpful information
+            logging.debug("Door43_job_receiver processing good callback...")
             stats_client.incr('GoodCallbackPostsReceived')
-            our_queue = Queue(our_adjusted_callback_name, connection=redis_connection)
-            len_our_queue = len(our_queue)
-            stats_client.gauge(prefix+'QueueLength', len_our_queue)
-            failed_queue = Queue('failed', connection=redis_connection)
-            len_failed_queue = len(failed_queue)
-            stats_client.gauge('FailedQueueLength', len_failed_queue)
+
             # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
             #           (For now at least, we prefer them to just stay in the queue if they're not getting processed.)
             #       The timeout value determines the max run time of the worker once the job is accessed
@@ -223,6 +228,7 @@ def callback_receiver():
             #our_queue_worker_count = Worker.count(queue=our_queue)
             #logging.debug(f"Our {our_adjusted_callback_name} queue workers = {our_queue_worker_count}")
 
+            len_our_queue = len(our_queue) # Update
             other_callback_queue = Queue(other_our_adjusted_callback_name, connection=redis_connection)
             logging.info(f'{OUR_NAME} queued valid callback job to {our_adjusted_callback_name} ' \
                         f'({len_our_queue} jobs now ' \
