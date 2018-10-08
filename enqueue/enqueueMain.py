@@ -60,6 +60,13 @@ logging.info(f"enqueueMain.py running on Python v{sys.version}{prefix_string}")
 # Get the redis URL from the environment, otherwise use a local test instance
 redis_hostname = getenv('REDIS_HOSTNAME', 'redis')
 logging.info(f"redis_hostname is {redis_hostname!r}")
+# And now connect so it fails at import time if no Redis instance available
+logging.debug("Door43_job_receiver() connecting to Redis...")
+redis_connection = StrictRedis(host=redis_hostname)
+logging.debug("Getting total worker count in order to verify working Redis connection...")
+total_worker_count = Worker.count(connection=redis_connection)
+logging.debug(f"Total rq workers = {total_worker_count}")
+
 
 # Get the Graphite URL from the environment, otherwise use a local test instance
 graphite_url = getenv('GRAPHITE_HOSTNAME', 'localhost')
@@ -67,8 +74,8 @@ logging.info(f"graphite_url is {graphite_url!r}")
 stats_client = StatsClient(host=graphite_url, port=8125, prefix=our_adjusted_name)
 
 
-
 app = Flask(__name__)
+logging.info(f"{our_adjusted_name} is up and ready to go...")
 
 
 ## This code is for debugging only and can be removed
@@ -119,13 +126,25 @@ def job_receiver():
     if request.method == 'POST':
         stats_client.incr('TotalPostsReceived')
         logging.info(f"Door43 {'('+prefix+')' if prefix else ''} enqueue received request: {request}")
-        response_ok_flag, response_dict = check_posted_payload(request) # response_dict is json payload if successful, else error info
 
+        our_queue = Queue(our_adjusted_name, connection=redis_connection)
+
+        # Find out how many workers we have
+        total_worker_count = Worker.count(connection=redis_connection)
+        logging.debug(f"Total rq workers = {total_worker_count}")
+        our_queue_worker_count = Worker.count(queue=our_queue)
+        logging.debug(f"Our {our_adjusted_name} queue workers = {our_queue_worker_count}")
+        stats_client.gauge(our_adjusted_name+'WorkersAvailable', our_queue_worker_count)
+        if our_queue_worker_count < 1:
+            response_dict = {'error': 'No Door43 job handler workers available.',
+                             'status': 'failed'}
+            logging.error(f'{OUR_NAME} responding with 502: {response_dict}')
+            return jsonify(response_dict), 502 # Bad Gateway (or could do 503 Service Unavailable)
+
+        response_ok_flag, response_dict = check_posted_payload(request) # response_dict is json payload if successful, else error info
         if response_ok_flag:
             # Collect (and log) some helpful information
             stats_client.incr('GoodPostsReceived')
-            redis_connection = StrictRedis(host=redis_hostname)
-            our_queue = Queue(our_adjusted_name, connection=redis_connection)
             len_our_queue = len(our_queue)
             stats_client.gauge(prefix+'QueueLength', len_our_queue)
             failed_queue = Queue('failed', connection=redis_connection)
@@ -142,12 +161,6 @@ def job_receiver():
             #logging.debug(f"Total rq workers ({len(workers)}): {workers}")
             #our_queue_workers = Worker.all(queue=our_queue)
             #logging.debug(f"Our {our_adjusted_name} queue workers ({len(our_queue_workers)}): {our_queue_workers}")
-
-            # Find out how many workers we have
-            #worker_count = Worker.count(connection=redis_connection)
-            #logging.debug(f"Total rq workers = {worker_count}")
-            #our_queue_worker_count = Worker.count(queue=our_queue)
-            #logging.debug(f"Our {our_adjusted_name} queue workers = {our_queue_worker_count}")
 
             other_queue = Queue(other_our_adjusted_name, connection=redis_connection)
             logging.info(f'{OUR_NAME} queued valid job to {our_adjusted_name} ' \
@@ -181,12 +194,11 @@ def callback_receiver():
     if request.method == 'POST':
         stats_client.incr('TotalCallbackPostsReceived')
         logging.info(f"Enqueue received callback request: {request}")
-        response_ok_flag, response_dict = check_posted_callback_payload(request) # response_dict is json payload if successful, else error info
 
+        response_ok_flag, response_dict = check_posted_callback_payload(request) # response_dict is json payload if successful, else error info
         if response_ok_flag:
             # Collect (and log) some helpful information
             stats_client.incr('GoodCallbackPostsReceived')
-            redis_connection = StrictRedis(host=redis_hostname)
             our_queue = Queue(our_adjusted_callback_name, connection=redis_connection)
             len_our_queue = len(our_queue)
             stats_client.gauge(prefix+'QueueLength', len_our_queue)
