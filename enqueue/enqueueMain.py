@@ -37,7 +37,7 @@ if prefix not in ('', 'dev-'):
 our_adjusted_name = prefix + OUR_NAME
 # NOTE: The prefixed version must also listen at a different port (specified in gunicorn run command)
 
-logging.basicConfig(level=logging.DEBUG if prefix else logging.ERROR)
+logging.basicConfig(level=logging.DEBUG if prefix else logging.INFO)
 prefix_string = f" with prefix {prefix!r}" if prefix else ""
 logging.info(f"enqueueMain.py running on Python v{sys.version}{prefix_string}")
 
