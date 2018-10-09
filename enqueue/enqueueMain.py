@@ -200,7 +200,7 @@ def callback_receiver():
         # Collect (and log) some helpful information
         our_queue = Queue(our_adjusted_callback_name, connection=redis_connection)
         len_our_queue = len(our_queue)
-        stats_client.gauge(prefix+'QueueLength', len_our_queue)
+        stats_client.gauge(prefix+'CallbackQueueLength', len_our_queue)
         failed_queue = Queue('failed', connection=redis_connection)
         len_failed_queue = len(failed_queue)
         stats_client.gauge('FailedQueueLength', len_failed_queue)
