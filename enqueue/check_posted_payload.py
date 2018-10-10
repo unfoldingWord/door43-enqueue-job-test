@@ -1,12 +1,10 @@
 # This code adapted by RJH June 2018 from tx-manager/client_webhook/ClientWebhookHandler
 #   Updated Sept 2018 to add callback check
 
-import logging
-
 GOGS_URL = 'https://git.door43.org'
 
 
-def check_posted_payload(request):
+def check_posted_payload(request, logger):
     """
     Accepts webhook notification from DCS.
         Parameter is a rq request object
@@ -17,17 +15,17 @@ def check_posted_payload(request):
     """
     # Bail if this is not a POST with a payload
     if not request.data:
-        logging.error("Received request but no payload found")
+        logger.error("Received request but no payload found")
         return False, {'error': 'No payload found. You must submit a POST request via a DCS webhook notification'}
 
     # Bail if this is not from DCS
     if 'X-Gogs-Event' not in request.headers:
-        logging.error(f"No 'X-Gogs-Event' in {request.headers}")
+        logger.error(f"No 'X-Gogs-Event' in {request.headers}")
         return False, {'error': 'This does not appear to be from DCS.'}
 
     # Bail if this is not a push event
     if not request.headers['X-Gogs-Event'] == 'push':
-        logging.error(f"X-Gogs-Event {request.headers['X-Gogs-Event']!r} is not a push")
+        logger.error(f"X-Gogs-Event {request.headers['X-Gogs-Event']!r} is not a push")
         return False, {'error': 'This does not appear to be a push.'}
 
     # Get the json payload and check it
@@ -36,27 +34,27 @@ def check_posted_payload(request):
     # Bail if the URL to the repo is invalid
     try:
         if not payload_json['repository']['html_url'].startswith(GOGS_URL):
-            logging.error(f"The repo at {payload_json['repository']['html_url']!r} does not belong to {GOGS_URL!r}")
+            logger.error(f"The repo at {payload_json['repository']['html_url']!r} does not belong to {GOGS_URL!r}")
             return False, {'error': f'The repo does not belong to {GOGS_URL}.'}
     except KeyError:
-        logging.error("No repo URL specified")
+        logger.error("No repo URL specified")
         return False, {'error': 'No repo URL specified.'}
 
     # Bail if the commit branch is not the default branch
     try:
         commit_branch = payload_json['ref'].split('/')[2]
     except (IndexError, AttributeError):
-        logging.error(f"Could not determine commit branch from {payload_json['ref']}")
+        logger.error(f"Could not determine commit branch from {payload_json['ref']}")
         return False, {'error': 'Could not determine commit branch.'}
     except KeyError:
-        logging.error("No commit branch specified")
+        logger.error("No commit branch specified")
         return False, {'error': 'No commit branch specified.'}
     try:
         if commit_branch != payload_json['repository']['default_branch']:
-            logging.error(f'Commit branch: {commit_branch} is not the default branch')
+            logger.error(f'Commit branch: {commit_branch} is not the default branch')
             return False, {'error': f'Commit branch: {commit_branch} is not the default branch.'}
     except KeyError:
-        logging.error("No default branch specified")
+        logger.error("No default branch specified")
         return False, {'error': 'No default branch specified.'}
 
     # TODO: Check why this code was commented out in tx-manager -- if it's not necessary let's delete it
@@ -67,13 +65,13 @@ def check_posted_payload(request):
     #if not user:
         #raise Exception('Invalid DCS user token given in Payload')
 
-    logging.info("DCS payload seems ok")
+    logger.info("DCS payload seems ok")
     return True, payload_json
 # end of check_posted_payload
 
 
 
-def check_posted_callback_payload(request):
+def check_posted_callback_payload(request, logger):
     """
     Accepts callback notification from TX.
         Parameter is a rq request object
@@ -84,18 +82,18 @@ def check_posted_callback_payload(request):
     """
     # Bail if this is not a POST with a payload
     if not request.data:
-        logging.error("Received request but no payload found")
+        logger.error("Received request but no payload found")
         return False, {'error': 'No payload found. You must submit a POST request'}
 
     # TODO: What headers do we need to check ???
     ## Bail if this is not from tX
     #if 'X-Gogs-Event' not in request.headers:
-        #logging.error(f"Cannot find 'X-Gogs-Event' in {request.headers}")
+        #logger.error(f"Cannot find 'X-Gogs-Event' in {request.headers}")
         #return False, {'error': 'This does not appear to be from tX.'}
 
     ## Bail if this is not a push event
     #if not request.headers['X-Gogs-Event'] == 'push':
-        #logging.error(f"X-Gogs-Event is not a push in {request.headers}")
+        #logger.error(f"X-Gogs-Event is not a push in {request.headers}")
         #return False, {'error': 'This does not appear to be a push.'}
 
     # Get the json payload and check it
@@ -106,29 +104,29 @@ def check_posted_callback_payload(request):
     ## Bail if the URL to the repo is invalid
     #try:
         #if not payload_json['repository']['html_url'].startswith(GOGS_URL):
-            #logging.error(f"The repo at {payload_json['repository']['html_url']!r} does not belong to {GOGS_URL!r}")
+            #logger.error(f"The repo at {payload_json['repository']['html_url']!r} does not belong to {GOGS_URL!r}")
             #return False, {'error': f'The repo does not belong to {GOGS_URL}.'}
     #except KeyError:
-        #logging.error("No repo URL specified")
+        #logger.error("No repo URL specified")
         #return False, {'error': 'No repo URL specified.'}
 
     ## Bail if the commit branch is not the default branch
     #try:
         #commit_branch = payload_json['ref'].split('/')[2]
     #except (IndexError, AttributeError):
-        #logging.error(f"Could not determine commit branch from {payload_json['ref']}")
+        #logger.error(f"Could not determine commit branch from {payload_json['ref']}")
         #return False, {'error': 'Could not determine commit branch.'}
     #except KeyError:
-        #logging.error("No commit branch specified")
+        #logger.error("No commit branch specified")
         #return False, {'error': 'No commit branch specified.'}
     #try:
         #if commit_branch != payload_json['repository']['default_branch']:
-            #logging.error(f'Commit branch: {commit_branch} is not the default branch')
+            #logger.error(f'Commit branch: {commit_branch} is not the default branch')
             #return False, {'error': f'Commit branch: {commit_branch} is not the default branch.'}
     #except KeyError:
-        #logging.error("No default branch specified")
+        #logger.error("No default branch specified")
         #return False, {'error': 'No default branch specified.'}
 
-    logging.info("Callback payload seems ok")
+    logger.info("Callback payload seems ok")
     return True, payload_json
 # end of check_posted_callback_payload
