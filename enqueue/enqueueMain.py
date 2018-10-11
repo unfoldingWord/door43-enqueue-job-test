@@ -160,11 +160,11 @@ def job_receiver():
     response_ok_flag, response_dict = check_posted_payload(request, logger)
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
-        logger.debug("Door43_job_receiver processing good payload...")
+        logger.debug(f"{OUR_NAME} processing good payload...")
         stats_client.incr('posts.succeeded')
 
         # Add our fields
-        response_dict['door43_retry_count'] = 0
+        response_dict['door43_webhook_retry_count'] = 0 # In case we want to retry failed jobs
 
         # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
         #           (For now at least, we prefer them to just stay in the queue if they're not getting processed.)
@@ -223,7 +223,7 @@ def callback_receiver():
     response_ok_flag, response_dict = check_posted_callback_payload(request, logger)
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
-        logger.debug("Door43_job_receiver processing good callback...")
+        logger.debug(f"{OUR_NAME} processing good callback...")
         stats_client.incr('callback_posts.succeeded')
 
         # Add our fields
