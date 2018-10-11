@@ -48,14 +48,30 @@ def check_posted_payload(request, logger):
         return False, {'error': 'Could not determine commit branch.'}
     except KeyError:
         logger.error("No commit branch specified")
-        return False, {'error': 'No commit branch specified.'}
+        return False, {'error': "No commit branch specified."}
     try:
         if commit_branch != payload_json['repository']['default_branch']:
-            logger.error(f'Commit branch: {commit_branch} is not the default branch')
-            return False, {'error': f'Commit branch: {commit_branch} is not the default branch.'}
+            logger.error(f"Commit branch: {commit_branch!r} is not the default branch")
+            return False, {'error': f"Commit branch: {commit_branch!r} is not the default branch."}
     except KeyError:
         logger.error("No default branch specified")
-        return False, {'error': 'No default branch specified.'}
+        return False, {'error': "No default branch specified."}
+
+    # Bail if this is not an actual commit
+    # NOTE: What are these notifications??? 'before' and 'after' have the same commit id
+    try:
+        if not payload_json['commits']:
+            logger.error("No commits found")
+            try:
+                logger.info(f"BEFORE is {payload_json['before']}")
+                logger.info(f"AFTER  is {payload_json['after']}")
+            except KeyError:
+                pass
+            return False, {'error': "No commits found."}
+    except KeyError:
+        logger.error("No commits specified")
+        return False, {'error': "No commits specified."}
+
 
     # TODO: Check why this code was commented out in tx-manager -- if it's not necessary let's delete it
     # Check that the user token is valid
@@ -65,7 +81,7 @@ def check_posted_payload(request, logger):
     #if not user:
         #raise Exception('Invalid DCS user token given in Payload')
 
-    logger.info("DCS payload seems ok")
+    logger.debug("Door43 payload seems ok")
     return True, payload_json
 # end of check_posted_payload
 
@@ -98,7 +114,7 @@ def check_posted_callback_payload(request, logger):
 
     # Get the json payload and check it
     payload_json = request.get_json()
-    print( "callback payload is", repr(payload_json))
+    logger.debug(f"callback payload is {payload_json}")
 
     # TODO: What info do we need to check and to match to a job
     ## Bail if the URL to the repo is invalid
@@ -127,6 +143,6 @@ def check_posted_callback_payload(request, logger):
         #logger.error("No default branch specified")
         #return False, {'error': 'No default branch specified.'}
 
-    logger.info("Callback payload seems ok")
+    logger.debug("Door43 callback payload seems ok")
     return True, payload_json
 # end of check_posted_callback_payload
