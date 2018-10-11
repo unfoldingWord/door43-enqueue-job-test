@@ -19,7 +19,7 @@ ENV DEBUG_MODE True
 # NOTE: The following environment variables can be set:
 #	QUEUE_PREFIX dev- (optional -- defaults to empty string)
 #	DEBUG_MODE True (optional -- defaults to False)
-#   REDIS_URL (optional -- defaults to 'redis')
+#   REDIS_HOSTNAME (optional -- defaults to 'redis')
 #   GRAPHITE_URL (optional -- defaults to 'localhost')
 
 # NOTE: this developBranch listens on 8001 (master on 8000)

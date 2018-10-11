@@ -1,6 +1,7 @@
 from unittest import TestCase
 from unittest.mock import Mock
 import json
+import logging
 
 from enqueue.check_posted_payload import check_posted_payload
 
@@ -11,9 +12,9 @@ class TestPayloadCheck(TestCase):
         payload_json = ''
         mock_request = Mock()
         mock_request.data = payload_json
-        output = check_posted_payload(mock_request)
+        output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': 'No payload found. You must submit a POST request via a DCS webhook notification'
+            'error': "No payload found. You must submit a POST request via a DCS webhook notification"
         }
         self.assertEqual(output, expected)
 
@@ -23,9 +24,9 @@ class TestPayloadCheck(TestCase):
         mock_request = Mock()
         mock_request.headers = headers
         mock_request.data = payload_json
-        output = check_posted_payload(mock_request)
+        output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': 'This does not appear to be from DCS.'
+            'error': "This does not appear to be from DCS."
         }
         self.assertEqual(output, expected)
 
@@ -35,9 +36,9 @@ class TestPayloadCheck(TestCase):
         mock_request = Mock()
         mock_request.headers = headers
         mock_request.data = payload_json
-        output = check_posted_payload(mock_request)
+        output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': 'This does not appear to be from DCS.'
+            'error': "This does not appear to be from DCS."
         }
         self.assertEqual(output, expected)
 
@@ -47,9 +48,9 @@ class TestPayloadCheck(TestCase):
         mock_request = Mock()
         mock_request.headers = headers
         mock_request.data = payload_json
-        output = check_posted_payload(mock_request)
+        output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': 'This does not appear to be a push.'
+            'error': "This does not appear to be a push."
         }
         self.assertEqual(output, expected)
 
@@ -59,9 +60,9 @@ class TestPayloadCheck(TestCase):
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers
         mock_request.data = payload_json
-        output = check_posted_payload(mock_request)
+        output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': 'No repo URL specified.'
+            'error': "No repo URL specified."
         }
         self.assertEqual(output, expected)
 
@@ -75,9 +76,9 @@ class TestPayloadCheck(TestCase):
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers
         mock_request.data = payload_json
-        output = check_posted_payload(mock_request)
+        output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': 'The repo does not belong to https://git.door43.org.'
+            'error': "The repo does not belong to https://git.door43.org."
         }
         self.assertEqual(output, expected)
 
@@ -91,9 +92,9 @@ class TestPayloadCheck(TestCase):
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers
         mock_request.data = payload_json
-        output = check_posted_payload(mock_request)
+        output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': 'No commit branch specified.'
+            'error': "No commit branch specified."
         }
         self.assertEqual(output, expected)
 
@@ -108,9 +109,9 @@ class TestPayloadCheck(TestCase):
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers
         mock_request.data = payload_json
-        output = check_posted_payload(mock_request)
+        output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': 'Could not determine commit branch.'
+            'error': "Could not determine commit branch."
         }
         self.assertEqual(output, expected)
 
@@ -125,9 +126,9 @@ class TestPayloadCheck(TestCase):
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers
         mock_request.data = payload_json
-        output = check_posted_payload(mock_request)
+        output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': 'No default branch specified.'
+            'error': "No default branch specified."
         }
         self.assertEqual(output, expected)
 
@@ -143,13 +144,13 @@ class TestPayloadCheck(TestCase):
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers
         mock_request.data = payload_json
-        output = check_posted_payload(mock_request)
+        output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': 'Commit branch: notMaster is not the default branch.'
+            'error': "Commit branch: 'notMaster' is not the default branch."
         }
         self.assertEqual(output, expected)
 
-    def test_basic_json_success(self):
+    def test_missing_commits_entry(self):
         headers = {'X-Gogs-Event':'push'}
         payload_json = {
             'ref':'refs/heads/master',
@@ -161,7 +162,45 @@ class TestPayloadCheck(TestCase):
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers
         mock_request.data = payload_json
-        output = check_posted_payload(mock_request)
+        output = check_posted_payload(mock_request, logging)
+        expected = False, {
+            'error': "No commits specified."
+        }
+        self.assertEqual(output, expected)
+
+    def test_empty_commits_entry(self):
+        headers = {'X-Gogs-Event':'push'}
+        payload_json = {
+            'ref':'refs/heads/master',
+            'repository':{
+                'html_url':'https://git.door43.org/whatever',
+                'default_branch':'master',
+                },
+            'commits': [],
+            }
+        mock_request = Mock(**{'get_json.return_value':payload_json})
+        mock_request.headers = headers
+        mock_request.data = payload_json
+        output = check_posted_payload(mock_request, logging)
+        expected = False, {
+            'error': "No commits found."
+        }
+        self.assertEqual(output, expected)
+
+    def test_basic_json_success(self):
+        headers = {'X-Gogs-Event':'push'}
+        payload_json = {
+            'ref':'refs/heads/master',
+            'repository':{
+                'html_url':'https://git.door43.org/whatever',
+                'default_branch':'master',
+                },
+            'commits': ['some commit info'],
+            }
+        mock_request = Mock(**{'get_json.return_value':payload_json})
+        mock_request.headers = headers
+        mock_request.data = payload_json
+        output = check_posted_payload(mock_request, logging)
         expected = True, payload_json
         self.assertEqual(output, expected)
 
@@ -172,6 +211,6 @@ class TestPayloadCheck(TestCase):
         mock_request = Mock(**{'get_json.return_value':payload_json})
         mock_request.headers = headers
         mock_request.data = payload_json
-        output = check_posted_payload(mock_request)
+        output = check_posted_payload(mock_request, logging)
         expected = True, payload_json
         self.assertEqual(output, expected)
