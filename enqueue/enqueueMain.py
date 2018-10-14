@@ -141,7 +141,7 @@ def job_receiver():
     our_queue = Queue(our_adjusted_name, connection=redis_connection)
 
     # Collect and log some helpful information
-    len_our_queue = len(our_queue)
+    len_our_queue = len(our_queue) # Should normally sit at zero here
     stats_client.gauge('webhook.queue.length.current', len_our_queue)
     failed_queue = Queue('failed', connection=redis_connection)
     len_failed_queue = len(failed_queue)
@@ -215,7 +215,7 @@ def callback_receiver():
 
     # Collect (and log) some helpful information
     our_queue = Queue(our_adjusted_callback_name, connection=redis_connection)
-    len_our_queue = len(our_queue)
+    len_our_queue = len(our_queue) # Should normally sit at zero here
     stats_client.gauge('callback.queue.length.current', len_our_queue)
     failed_queue = Queue('failed', connection=redis_connection)
     len_failed_queue = len(failed_queue)
