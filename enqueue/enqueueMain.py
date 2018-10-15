@@ -160,12 +160,12 @@ def job_receiver():
     response_ok_flag, response_dict = check_posted_payload(request, logger)
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
-        logger.debug(f"{OUR_NAME} processing good payload...")
+        logger.debug(f"{OUR_NAME} queuing good payload...")
         stats_client.incr('webhook.posts.succeeded')
 
         # Add our fields
         response_dict['door43_webhook_retry_count'] = 0 # In case we want to retry failed jobs
-        response_dict['door43_webhook_received_at'] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ") # Used to calculate total elapsed time
+        response_dict['door43_webhook_received_at'] = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ') # Used to calculate total elapsed time
 
         # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
         #           (For now at least, we prefer them to just stay in the queue if they're not getting processed.)
@@ -224,7 +224,7 @@ def callback_receiver():
     response_ok_flag, response_dict = check_posted_callback_payload(request, logger)
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
-        logger.debug(f"{OUR_NAME} processing good callback...")
+        logger.debug(f"{OUR_NAME} queuing good callback...")
         stats_client.incr('callback.posts.succeeded')
 
         # Add our fields
