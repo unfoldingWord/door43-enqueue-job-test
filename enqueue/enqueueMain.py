@@ -161,7 +161,6 @@ def job_receiver():
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
         logger.debug(f"{OUR_NAME} queuing good payload...")
-        stats_client.incr('webhook.posts.succeeded')
 
         # Add our fields
         response_dict['door43_webhook_retry_count'] = 0 # In case we want to retry failed jobs
@@ -192,6 +191,7 @@ def job_receiver():
                                'status': 'queued',
                                'queue_name': our_adjusted_name,
                                'door43_job_queued_at': datetime.utcnow()}
+        stats_client.incr('webhook.posts.succeeded')
         return jsonify(webhook_return_dict)
     #else:
     stats_client.incr('webhook.posts.failed')
@@ -225,7 +225,6 @@ def callback_receiver():
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
         logger.debug(f"{OUR_NAME} queuing good callback...")
-        stats_client.incr('callback.posts.succeeded')
 
         # Add our fields
         response_dict['door43_callback_retry_count'] = 0
@@ -260,7 +259,8 @@ def callback_receiver():
         callback_return_dict = {'success': 'true',
                                 'status': 'queued',
                                 'queue_name': our_adjusted_callback_name,
-                                'door43_called_queued_at': datetime.utcnow()}
+                                'door43_callback_queued_at': datetime.utcnow()}
+        stats_client.incr('callback.posts.succeeded')
         return jsonify(callback_return_dict)
     #else:
     stats_client.incr('callback.posts.failed')
