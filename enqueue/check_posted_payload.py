@@ -41,7 +41,7 @@ def check_posted_payload(request, logger):
     except (KeyError, AttributeError):
         pusher_name = None
     try:
-        commit_message = payload_json['commits'][0]['message']
+        commit_message = payload_json['commits'][0]['message'].strip() # Seems to always end with a newline
     except (KeyError, AttributeError, TypeError, IndexError):
         commit_message = None
     logger.info(f"{pusher_name} pushed {repo_name} with \"{commit_message}\"")
