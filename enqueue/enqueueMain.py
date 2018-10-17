@@ -63,15 +63,15 @@ our_adjusted_callback_name = our_adjusted_name + CALLBACK_SUFFIX
 other_our_adjusted_callback_name = other_our_adjusted_name + CALLBACK_SUFFIX
 
 
-prefix_string = f" with prefix {prefix!r}" if prefix else ""
-logger.info(f"enqueueMain.py running on Python v{sys.version}{prefix_string}")
+prefix_string = f" ({prefix})" if prefix else ""
+logger.info(f"enqueueMain.py {prefix_string} running on Python v{sys.version}")
 
 
 # Get the redis URL from the environment, otherwise use a local test instance
 redis_hostname = getenv('REDIS_HOSTNAME', 'redis')
 logger.info(f"redis_hostname is {redis_hostname!r}")
 # And now connect so it fails at import time if no Redis instance available
-logger.debug("Door43_job_receiver() connecting to Redis...")
+logger.debug(f"{our_adjusted_name} connecting to Redis...")
 redis_connection = StrictRedis(host=redis_hostname)
 logger.debug("Getting total worker count in order to verify working Redis connection...")
 total_rq_worker_count = Worker.count(connection=redis_connection)
@@ -86,7 +86,7 @@ stats_client = StatsClient(host=graphite_url, port=8125, prefix=stats_prefix)
 
 
 app = Flask(__name__)
-logger.info(f"{our_adjusted_name} is up and ready to go...")
+logger.info(f"{our_adjusted_name} and callback is up and ready to go...")
 
 
 ## This code is for debugging only and can be removed
