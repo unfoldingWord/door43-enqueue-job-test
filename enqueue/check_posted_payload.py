@@ -31,6 +31,21 @@ def check_posted_payload(request, logger):
     # Get the json payload and check it
     payload_json = request.get_json()
 
+    # Give a brief but helpful info message for the logs
+    try:
+        repo_name = payload_json['repository']['full_name']
+    except (KeyError, AttributeError):
+        repo_name = None
+    try:
+        pusher_name = payload_json['pusher']['full_name']
+    except (KeyError, AttributeError):
+        pusher_name = None
+    try:
+        commit_message = payload_json['commits'][0]['message'].strip() # Seems to always end with a newline
+    except (KeyError, AttributeError, TypeError, IndexError):
+        commit_message = None
+    logger.info(f"{pusher_name} pushed {repo_name} with \"{commit_message}\"")
+
     # Bail if the URL to the repo is invalid
     try:
         if not payload_json['repository']['html_url'].startswith(GOGS_URL):

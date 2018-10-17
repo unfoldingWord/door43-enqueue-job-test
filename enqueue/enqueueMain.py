@@ -63,15 +63,15 @@ our_adjusted_callback_name = our_adjusted_name + CALLBACK_SUFFIX
 other_our_adjusted_callback_name = other_our_adjusted_name + CALLBACK_SUFFIX
 
 
-prefix_string = f" with prefix {prefix!r}" if prefix else ""
-logger.info(f"enqueueMain.py running on Python v{sys.version}{prefix_string}")
+prefix_string = f" ({prefix})" if prefix else ""
+logger.info(f"enqueueMain.py {prefix_string} running on Python v{sys.version}")
 
 
 # Get the redis URL from the environment, otherwise use a local test instance
 redis_hostname = getenv('REDIS_HOSTNAME', 'redis')
 logger.info(f"redis_hostname is {redis_hostname!r}")
 # And now connect so it fails at import time if no Redis instance available
-logger.debug("Door43_job_receiver() connecting to Redis...")
+logger.debug(f"{our_adjusted_name} connecting to Redis...")
 redis_connection = StrictRedis(host=redis_hostname)
 logger.debug("Getting total worker count in order to verify working Redis connection...")
 total_rq_worker_count = Worker.count(connection=redis_connection)
@@ -86,7 +86,7 @@ stats_client = StatsClient(host=graphite_url, port=8125, prefix=stats_prefix)
 
 
 app = Flask(__name__)
-logger.info(f"{our_adjusted_name} is up and ready to go...")
+logger.info(f"{our_adjusted_name} and callback is up and ready to go...")
 
 
 ## This code is for debugging only and can be removed
@@ -135,24 +135,24 @@ def job_receiver():
     Queue name is our_adjusted_name (may have been prefixed).
     """
     #assert request.method == 'POST'
-    stats_client.incr('posts.attempted')
-    logger.info(f"Door43 {'('+prefix+')' if prefix else ''} enqueue received request: {request}")
+    stats_client.incr('webhook.posts.attempted')
+    logger.info(f"{our_adjusted_name} received webhook request: {request}")
 
     our_queue = Queue(our_adjusted_name, connection=redis_connection)
 
     # Collect and log some helpful information
-    len_our_queue = len(our_queue)
-    stats_client.gauge('queue.length.current', len_our_queue)
+    len_our_queue = len(our_queue) # Should normally sit at zero here
+    stats_client.gauge('webhook.queue.length.current', len_our_queue)
     failed_queue = Queue('failed', connection=redis_connection)
     len_failed_queue = len(failed_queue)
-    stats_client.gauge('queue.length.failed', len_failed_queue)
+    stats_client.gauge('webhook.queue.length.failed', len_failed_queue)
 
     # Find out how many workers we have
     total_worker_count = Worker.count(connection=redis_connection)
     logger.debug(f"Total rq workers = {total_worker_count}")
     our_queue_worker_count = Worker.count(queue=our_queue)
     logger.debug(f"Our {our_adjusted_name} queue workers = {our_queue_worker_count}")
-    stats_client.gauge('workers.available', our_queue_worker_count)
+    stats_client.gauge('webhook.workers.available', our_queue_worker_count)
     if our_queue_worker_count < 1:
         logger.critical(f'{our_adjusted_name} has no job handler workers running!')
         # Go ahead and queue the job anyway for when a worker is restarted
@@ -160,11 +160,11 @@ def job_receiver():
     response_ok_flag, response_dict = check_posted_payload(request, logger)
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
-        logger.debug("Door43_job_receiver processing good payload...")
-        stats_client.incr('posts.succeeded')
+        logger.debug(f"{our_adjusted_name} queuing good payload...")
 
         # Add our fields
-        response_dict['door43_retry_count'] = 0
+        response_dict['door43_webhook_retry_count'] = 0 # In case we want to retry failed jobs
+        response_dict['door43_webhook_received_at'] = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ') # Used to calculate total elapsed time
 
         # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
         #           (For now at least, we prefer them to just stay in the queue if they're not getting processed.)
@@ -180,22 +180,23 @@ def job_receiver():
 
         len_our_queue = len(our_queue) # Update
         other_queue = Queue(other_our_adjusted_name, connection=redis_connection)
-        logger.info(f'{OUR_NAME} queued valid job to {our_adjusted_name} ' \
-                    f'({len_our_queue} jobs now ' \
-                        f'for {Worker.count(queue=our_queue)} workers, ' \
-                    f'{len(other_queue)} jobs in {other_our_adjusted_name} queue ' \
-                        f'for {Worker.count(queue=other_queue)} workers, ' \
-                    f'{len_failed_queue} failed jobs) at {datetime.utcnow()}')
+        logger.info(f"{our_adjusted_name} queued valid job to {our_adjusted_name} " \
+                    f"({len_our_queue} jobs now " \
+                        f"for {Worker.count(queue=our_queue)} workers, " \
+                    f"{len(other_queue)} jobs in {other_our_adjusted_name} queue " \
+                        f"for {Worker.count(queue=other_queue)} workers, " \
+                    f"{len_failed_queue} failed jobs) at {datetime.utcnow()}")
 
-        response_dict = {'success':'true',
-                         'status':'queued',
-                         'queue_name':our_adjusted_name,
-                         'queued_at':datetime.utcnow()}
-        return jsonify(response_dict)
+        webhook_return_dict = {'success': 'true',
+                               'status': 'queued',
+                               'queue_name': our_adjusted_name,
+                               'door43_job_queued_at': datetime.utcnow()}
+        stats_client.incr('webhook.posts.succeeded')
+        return jsonify(webhook_return_dict)
     #else:
-    stats_client.incr('posts.failed')
+    stats_client.incr('webhook.posts.failed')
     response_dict['status'] = 'failed'
-    logger.error(f'{OUR_NAME} ignored invalid payload; responding with {response_dict}')
+    logger.error(f"{our_adjusted_name} ignored invalid payload; responding with {response_dict}")
     return jsonify(response_dict), 400
 # end of job_receiver()
 
@@ -209,22 +210,21 @@ def callback_receiver():
     Queue name is our_adjusted_callback_name (may have been prefixed).
     """
     #assert request.method == 'POST'
-    stats_client.incr('callback_posts.attempted')
-    logger.info(f"Enqueue received callback request: {request}")
+    stats_client.incr('callback.posts.attempted')
+    logger.info(f"{our_adjusted_name} received callback request: {request}")
 
     # Collect (and log) some helpful information
     our_queue = Queue(our_adjusted_callback_name, connection=redis_connection)
-    len_our_queue = len(our_queue)
-    stats_client.gauge('callback_queue.length.current', len_our_queue)
+    len_our_queue = len(our_queue) # Should normally sit at zero here
+    stats_client.gauge('callback.queue.length.current', len_our_queue)
     failed_queue = Queue('failed', connection=redis_connection)
     len_failed_queue = len(failed_queue)
-    stats_client.gauge('queue.length.failed', len_failed_queue)
+    stats_client.gauge('callback.queue.length.failed', len_failed_queue)
 
     response_ok_flag, response_dict = check_posted_callback_payload(request, logger)
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
-        logger.debug("Door43_job_receiver processing good callback...")
-        stats_client.incr('callback_posts.succeeded')
+        logger.debug(f"{our_adjusted_name} queuing good callback...")
 
         # Add our fields
         response_dict['door43_callback_retry_count'] = 0
@@ -249,22 +249,23 @@ def callback_receiver():
 
         len_our_queue = len(our_queue) # Update
         other_callback_queue = Queue(other_our_adjusted_callback_name, connection=redis_connection)
-        logger.info(f'{OUR_NAME} queued valid callback job to {our_adjusted_callback_name} ' \
-                    f'({len_our_queue} jobs now ' \
-                        f'for {Worker.count(queue=our_queue)} workers, ' \
-                    f'{len(other_callback_queue)} jobs in {other_our_adjusted_callback_name} queue ' \
-                        f'for {Worker.count(queue=other_callback_queue)} workers, ' \
-                    f'{len_failed_queue} failed jobs) at {datetime.utcnow()}')
+        logger.info(f"{our_adjusted_name} queued valid callback job to {our_adjusted_callback_name} " \
+                    f"({len_our_queue} jobs now " \
+                        f"for {Worker.count(queue=our_queue)} workers, " \
+                    f"{len(other_callback_queue)} jobs in {other_our_adjusted_callback_name} queue " \
+                        f"for {Worker.count(queue=other_callback_queue)} workers, " \
+                    f"{len_failed_queue} failed jobs) at {datetime.utcnow()}")
 
-        response_dict = {'success':'true',
-                         'status':'queued',
-                         'queue_name':our_adjusted_callback_name,
-                         'queued_at':datetime.utcnow()}
-        return jsonify(response_dict)
+        callback_return_dict = {'success': 'true',
+                                'status': 'queued',
+                                'queue_name': our_adjusted_callback_name,
+                                'door43_callback_queued_at': datetime.utcnow()}
+        stats_client.incr('callback.posts.succeeded')
+        return jsonify(callback_return_dict)
     #else:
-    stats_client.incr('callback_posts.failed')
+    stats_client.incr('callback.posts.failed')
     response_dict['status'] = 'failed'
-    logger.error(f'{OUR_NAME} ignored invalid callback payload; responding with {response_dict}')
+    logger.error(f"{our_adjusted_name} ignored invalid callback payload; responding with {response_dict}")
     return jsonify(response_dict), 400
 # end of callback_receiver()
 
