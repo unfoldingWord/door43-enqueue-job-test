@@ -7,14 +7,14 @@
 # Python imports
 from os import getenv
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 # Library (PyPi) imports
 from flask import Flask, request, jsonify
 # NOTE: We use StrictRedis() because we don't need the backwards compatibility of Redis()
 from redis import StrictRedis
-from rq import Queue, Worker
+from rq import Queue, Worker, cancel_job
 from statsd import StatsClient # Graphite front-end
 
 # Local imports
@@ -89,39 +89,70 @@ app = Flask(__name__)
 logger.info(f"{our_adjusted_name} and callback is up and ready to go...")
 
 
-## This code is for debugging only and can be removed
-#@app.route('/showDB/', methods=['GET'])
-#def show_DB():
-    #"""
-    #Display a helpful status list to a user connecting to our debug URL.
-    #"""
-    #r = StrictRedis(host=redis_hostname)
-    #result_string = f'This {OUR_NAME} enqueuing service has:'
+def handle_failed_queue(our_queue_name):
+    """
+    Go through the failed queue, and see how many entries originated from our queue.
 
-    ## Look at environment variables
-    #result_string += '<h1>Environment Variables</h1>'
-    #result_string += f"<p>QUEUE_PREFIX={getenv('QUEUE_PREFIX', '(not set)=>(no prefix)')}</p>"
-    #result_string += f"<p>FLASK_ENV={getenv('FLASK_ENV', '(not set)=>(normal/production)')}</p>"
-    #result_string += f"<p>REDIS_HOSTNAME={getenv('REDIS_HOSTNAME', '(not set)=>redis')}</p>"
-    #result_string += f"<p>GRAPHITE_HOSTNAME={getenv('GRAPHITE_HOSTNAME', '(not set)=>localhost')}</p>"
+    Of those, permanently delete any that are older than two weeks old.
+    """
+    # print(f"handle_failed_queue({our_queue_name}) ...")
+    failed_queue = Queue('failed', connection=redis_connection)
+    len_failed_queue = len(failed_queue)
+    if len_failed_queue:
+        logger.debug(f"There are {len_failed_queue} total jobs in failed queue")
+    # dir ['DEFAULT_TIMEOUT', '__bool__', '__class__', '__delattr__', '__dict__', '__dir__', 
+    #  '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__',
+    #  '__init__', '__init_subclass__', '__iter__', '__le__', '__len__', '__lt__', '__module__',
+    #  '__ne__', '__new__', '__nonzero__', '__reduce__', '__reduce_ex__', '__repr__', 
+    #  '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__',
+    #  '_default_timeout', '_is_async', '_key', 'all', 'compact', 'connection', 'count',
+    #  'delete', 'dequeue', 'dequeue_any', 'empty', 'enqueue', 'enqueue_call',
+    #  'enqueue_dependents', 'enqueue_job', 'fetch_job', 'from_queue_key', 'get_job_ids',
+    #  'get_jobs', 'is_empty', 'job_class', 'job_ids', 'jobs', 'key', 'lpop', 'name',
+    #  'pop_job_id', 'push_job_id', 'redis_queue_namespace_prefix', 'redis_queues_keys', 
+    #  'remove', 'run_job']
 
-    ## Look at all the potential queues
-    #for this_our_adjusted_name in (OUR_NAME, 'dev-'+OUR_NAME, 'failed'):
-        #q = Queue(this_our_adjusted_name, connection=r)
-        #queue_output_string = ''
-        ##queue_output_string += '<p>Job IDs ({0}): {1}</p>'.format(len(q.job_ids), q.job_ids)
-        #queue_output_string += f'<p>Jobs ({len(q.jobs)}): {q.jobs}</p>'
-        #result_string += f'<h1>{this_our_adjusted_name} queue:</h1>{queue_output_string}'
+    # print("job_ids", failed_queue.job_ids)
+    # print("jobs", failed_queue.jobs)
+    len_our_failed_queue = 0
+    for failed_job in failed_queue.jobs.copy():
+        # print("\njob id", repr(failed_job.id)) # Displays RQ job number
+        # print("origin", repr(failed_job.origin)) # Displays queue name (str)
+        # print("meta", repr(failed_job.meta)) # Empty dict
+        if failed_job.origin == our_queue_name:
+            # print("Looking at job:", failed_job)
+            # dir ['__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__',
+            #  '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__',
+            #  '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__',
+            #  '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__',
+            #  '__str__', '__subclasshook__', '__weakref__', '_args', '_data', '_dependency_id',
+            #  '_execute', '_func_name', '_get_status', '_id', '_instance', '_kwargs',
+            #  '_result', '_set_status', '_status', '_unpickle_data', 'args', 'cancel',
+            #  'cleanup', 'connection', 'create', 'created_at', 'data', 'delete',
+            #  'delete_dependents', 'dependency', 'dependent_ids', 'dependents_key',
+            #  'dependents_key_for', 'description', 'ended_at', 'enqueued_at', 'exc_info',
+            #  'exists', 'fetch', 'func', 'func_name', 'get_call_string', 'get_id', 
+            #  'get_result_ttl', 'get_status', 'get_ttl', 'id', 'instance', 'is_failed', 
+            #  'is_finished', 'is_queued', 'is_started', 'key', 'key_for', 'kwargs', 'meta',
+            #  'origin', 'perform', 'redis_job_namespace_prefix', 'refresh', 
+            #  'register_dependency', 'result', 'result_ttl', 'return_value', 'save', 
+            #  'save_meta', 'set_id', 'set_status', 'started_at', 'status', 'timeout', 'to_dict', 'ttl']
+            # for fieldname in failed_job.__dict__:
+            #     print(f"{fieldname}: {failed_job.__dict__[fieldname]}")
+            failed_duration = datetime.utcnow() - failed_job.enqueued_at
+            # print("failed_duration", failed_duration)
+            if failed_duration >= timedelta(weeks=2):
+                logger.info(f"Deleting expired '{our_queue_name}' failed job from {failed_job.enqueued_at}")
+                failed_job.delete() # .cancel() doesn't delete the Redis hash
+                # failed_queue.remove(failed_job.id)
+            else:
+                len_our_failed_queue += 1
+                # print("failed reason:", failed_job.exc_info)
 
-    #if redis_hostname == 'redis': # Can't do this for production redis (too many keys!!!)
-        ## Look at the raw keys
-        #keys_output_string = ''
-        #for key in r.scan_iter():
-            #keys_output_string += '<p>' + key.decode() + '</p>\n'
-        #result_string += f'<h1>All keys ({len(r.keys())}):</h1>{keys_output_string}'
-
-    #return result_string
-## end of show_DB()
+    if len_our_failed_queue:
+        logger.info(f"Have {len_our_failed_queue} of our jobs in failed queue")
+    return len_our_failed_queue
+# end of function handle_failed_queue
 
 
 # This is the main workhorse part of this code
@@ -143,9 +174,8 @@ def job_receiver():
     # Collect and log some helpful information
     len_our_queue = len(our_queue) # Should normally sit at zero here
     stats_client.gauge('webhook.queue.length.current', len_our_queue)
-    failed_queue = Queue('failed', connection=redis_connection)
-    len_failed_queue = len(failed_queue)
-    stats_client.gauge('webhook.queue.length.failed', len_failed_queue)
+    len_our_failed_queue = handle_failed_queue(our_adjusted_name)
+    stats_client.gauge('webhook.queue.length.failed', len_our_failed_queue)
 
     # Find out how many workers we have
     total_worker_count = Worker.count(connection=redis_connection)
@@ -185,7 +215,7 @@ def job_receiver():
                         f"for {Worker.count(queue=our_queue)} workers, " \
                     f"{len(other_queue)} jobs in {other_our_adjusted_name} queue " \
                         f"for {Worker.count(queue=other_queue)} workers, " \
-                    f"{len_failed_queue} failed jobs) at {datetime.utcnow()}")
+                    f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}")
 
         webhook_return_dict = {'success': 'true',
                                'status': 'queued',
@@ -217,9 +247,8 @@ def callback_receiver():
     our_queue = Queue(our_adjusted_callback_name, connection=redis_connection)
     len_our_queue = len(our_queue) # Should normally sit at zero here
     stats_client.gauge('callback.queue.length.current', len_our_queue)
-    failed_queue = Queue('failed', connection=redis_connection)
-    len_failed_queue = len(failed_queue)
-    stats_client.gauge('callback.queue.length.failed', len_failed_queue)
+    len_our_failed_queue = handle_failed_queue(our_adjusted_callback_name)
+    stats_client.gauge('callback.queue.length.failed', len_our_failed_queue)
 
     response_ok_flag, response_dict = check_posted_callback_payload(request, logger)
     # response_dict is json payload if successful, else error info
@@ -254,7 +283,7 @@ def callback_receiver():
                         f"for {Worker.count(queue=our_queue)} workers, " \
                     f"{len(other_callback_queue)} jobs in {other_our_adjusted_callback_name} queue " \
                         f"for {Worker.count(queue=other_callback_queue)} workers, " \
-                    f"{len_failed_queue} failed jobs) at {datetime.utcnow()}")
+                    f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}")
 
         callback_return_dict = {'success': 'true',
                                 'status': 'queued',

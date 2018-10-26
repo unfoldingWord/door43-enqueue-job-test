@@ -12,6 +12,7 @@ dependencies:
 	# It is recommended that a Python3 virtual environment be set-up before this point
 	#  python3 -m venv venv
 	#  source venv/bin/activate
+	pip3 install --upgrade pip
 	pip3 install --requirement enqueue/requirements.txt
 
 # NOTE: The following optional environment variables can be set:

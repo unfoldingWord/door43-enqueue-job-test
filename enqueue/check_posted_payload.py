@@ -44,7 +44,8 @@ def check_posted_payload(request, logger):
         commit_message = payload_json['commits'][0]['message'].strip() # Seems to always end with a newline
     except (KeyError, AttributeError, TypeError, IndexError):
         commit_message = None
-    logger.info(f"{pusher_name} pushed {repo_name} with \"{commit_message}\"")
+    if repo_name or pusher_name or commit_message: # Ignore it if they are all None
+        logger.info(f"{pusher_name} pushed '{repo_name}' with \"{commit_message}\"")
 
     # Bail if the URL to the repo is invalid
     try:
