@@ -88,15 +88,6 @@ def check_posted_payload(request, logger):
         logger.error("No commits specified")
         return False, {'error': "No commits specified."}
 
-
-    # TODO: Check why this code was commented out in tx-manager -- if it's not necessary let's delete it
-    # Check that the user token is valid
-    #if not App.gogs_user_token:
-        #raise Exception('DCS user token not given in Payload.')
-    #user = App.gogs_handler().get_user(App.gogs_user_token)
-    #if not user:
-        #raise Exception('Invalid DCS user token given in Payload')
-
     logger.debug("Door43 payload seems ok")
     return True, payload_json
 # end of check_posted_payload
