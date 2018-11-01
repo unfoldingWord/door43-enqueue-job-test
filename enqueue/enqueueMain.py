@@ -14,7 +14,7 @@ import logging
 from flask import Flask, request, jsonify
 # NOTE: We use StrictRedis() because we don't need the backwards compatibility of Redis()
 from redis import StrictRedis
-from rq import Queue, Worker, cancel_job
+from rq import Queue, Worker
 from statsd import StatsClient # Graphite front-end
 
 # Local imports
@@ -29,21 +29,21 @@ CALLBACK_SUFFIX = '_callback'
 WEBHOOK_URL_SEGMENT = '' # Leaving this blank will cause the service to run at '/'
 CALLBACK_URL_SEGMENT = WEBHOOK_URL_SEGMENT + 'tx-callback/'
 
-JOB_TIMEOUT = '200s' # Then a running job (taken out of the queue) will be considered to have failed
-    # NOTE: This is only the time until webhook.py returns after submitting the job
-    #           -- the actual conversion jobs might still be running.
-CALLBACK_TIMEOUT = '200s' # Then a running callback job (taken out of the queue) will be considered to have failed
-
 
 # Look at relevant environment variables
 prefix = getenv('QUEUE_PREFIX', '') # Gets (optional) QUEUE_PREFIX environment variable -- set to 'dev-' for development
 
 
+JOB_TIMEOUT = '360s' if prefix else '180s' # Then a running job (taken out of the queue) will be considered to have failed
+    # NOTE: This is only the time until webhook.py returns after preprocessing and submitting the job
+    #           -- the actual conversion jobs might still be running.
+CALLBACK_TIMEOUT = '360s' if prefix else '180s' # Then a running callback job (taken out of the queue) will be considered to have failed
+
+
 # Setup logging
 logger = logging.getLogger()
 sh = logging.StreamHandler(sys.stdout)
-head = '%(asctime)s - %(levelname)s: %(message)s'
-sh.setFormatter(logging.Formatter(head))
+sh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s: %(message)s'))
 logger.addHandler(sh)
 # Enable DEBUG logging for dev- instances (but less logging for production)
 logger.setLevel(logging.DEBUG if prefix else logging.INFO)
@@ -95,59 +95,20 @@ def handle_failed_queue(our_queue_name):
 
     Of those, permanently delete any that are older than two weeks old.
     """
-    # print(f"handle_failed_queue({our_queue_name}) ...")
     failed_queue = Queue('failed', connection=redis_connection)
     len_failed_queue = len(failed_queue)
     if len_failed_queue:
         logger.debug(f"There are {len_failed_queue} total jobs in failed queue")
-    # dir ['DEFAULT_TIMEOUT', '__bool__', '__class__', '__delattr__', '__dict__', '__dir__', 
-    #  '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__',
-    #  '__init__', '__init_subclass__', '__iter__', '__le__', '__len__', '__lt__', '__module__',
-    #  '__ne__', '__new__', '__nonzero__', '__reduce__', '__reduce_ex__', '__repr__', 
-    #  '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__',
-    #  '_default_timeout', '_is_async', '_key', 'all', 'compact', 'connection', 'count',
-    #  'delete', 'dequeue', 'dequeue_any', 'empty', 'enqueue', 'enqueue_call',
-    #  'enqueue_dependents', 'enqueue_job', 'fetch_job', 'from_queue_key', 'get_job_ids',
-    #  'get_jobs', 'is_empty', 'job_class', 'job_ids', 'jobs', 'key', 'lpop', 'name',
-    #  'pop_job_id', 'push_job_id', 'redis_queue_namespace_prefix', 'redis_queues_keys', 
-    #  'remove', 'run_job']
 
-    # print("job_ids", failed_queue.job_ids)
-    # print("jobs", failed_queue.jobs)
     len_our_failed_queue = 0
     for failed_job in failed_queue.jobs.copy():
-        # print("\njob id", repr(failed_job.id)) # Displays RQ job number
-        # print("origin", repr(failed_job.origin)) # Displays queue name (str)
-        # print("meta", repr(failed_job.meta)) # Empty dict
         if failed_job.origin == our_queue_name:
-            # print("Looking at job:", failed_job)
-            # dir ['__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__',
-            #  '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__',
-            #  '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__',
-            #  '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__',
-            #  '__str__', '__subclasshook__', '__weakref__', '_args', '_data', '_dependency_id',
-            #  '_execute', '_func_name', '_get_status', '_id', '_instance', '_kwargs',
-            #  '_result', '_set_status', '_status', '_unpickle_data', 'args', 'cancel',
-            #  'cleanup', 'connection', 'create', 'created_at', 'data', 'delete',
-            #  'delete_dependents', 'dependency', 'dependent_ids', 'dependents_key',
-            #  'dependents_key_for', 'description', 'ended_at', 'enqueued_at', 'exc_info',
-            #  'exists', 'fetch', 'func', 'func_name', 'get_call_string', 'get_id', 
-            #  'get_result_ttl', 'get_status', 'get_ttl', 'id', 'instance', 'is_failed', 
-            #  'is_finished', 'is_queued', 'is_started', 'key', 'key_for', 'kwargs', 'meta',
-            #  'origin', 'perform', 'redis_job_namespace_prefix', 'refresh', 
-            #  'register_dependency', 'result', 'result_ttl', 'return_value', 'save', 
-            #  'save_meta', 'set_id', 'set_status', 'started_at', 'status', 'timeout', 'to_dict', 'ttl']
-            # for fieldname in failed_job.__dict__:
-            #     print(f"{fieldname}: {failed_job.__dict__[fieldname]}")
             failed_duration = datetime.utcnow() - failed_job.enqueued_at
-            # print("failed_duration", failed_duration)
             if failed_duration >= timedelta(weeks=2):
                 logger.info(f"Deleting expired '{our_queue_name}' failed job from {failed_job.enqueued_at}")
                 failed_job.delete() # .cancel() doesn't delete the Redis hash
-                # failed_queue.remove(failed_job.id)
             else:
                 len_our_failed_queue += 1
-                # print("failed reason:", failed_job.exc_info)
 
     if len_our_failed_queue:
         logger.info(f"Have {len_our_failed_queue} of our jobs in failed queue")
@@ -224,8 +185,8 @@ def job_receiver():
         stats_client.incr('webhook.posts.succeeded')
         return jsonify(webhook_return_dict)
     #else:
-    stats_client.incr('webhook.posts.failed')
-    response_dict['status'] = 'failed'
+    stats_client.incr('webhook.posts.invalid')
+    response_dict['status'] = 'invalid'
     logger.error(f"{our_adjusted_name} ignored invalid payload; responding with {response_dict}")
     return jsonify(response_dict), 400
 # end of job_receiver()
@@ -292,8 +253,8 @@ def callback_receiver():
         stats_client.incr('callback.posts.succeeded')
         return jsonify(callback_return_dict)
     #else:
-    stats_client.incr('callback.posts.failed')
-    response_dict['status'] = 'failed'
+    stats_client.incr('callback.posts.invalid')
+    response_dict['status'] = 'invalid'
     logger.error(f"{our_adjusted_name} ignored invalid callback payload; responding with {response_dict}")
     return jsonify(response_dict), 400
 # end of callback_receiver()
