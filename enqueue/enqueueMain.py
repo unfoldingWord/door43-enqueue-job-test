@@ -71,9 +71,9 @@ logger.info(f"enqueueMain.py {prefix_string} running on Python v{sys.version}")
 redis_hostname = getenv('REDIS_HOSTNAME', 'redis')
 logger.info(f"redis_hostname is {redis_hostname!r}")
 # And now connect so it fails at import time if no Redis instance available
-logger.debug(f"{our_adjusted_name} connecting to Redis...")
+logger.debug(f"{our_adjusted_name} connecting to Redis…")
 redis_connection = StrictRedis(host=redis_hostname)
-logger.debug("Getting total worker count in order to verify working Redis connection...")
+logger.debug("Getting total worker count in order to verify working Redis connection…")
 total_rq_worker_count = Worker.count(connection=redis_connection)
 logger.debug(f"Total rq workers = {total_rq_worker_count}")
 
@@ -86,7 +86,7 @@ stats_client = StatsClient(host=graphite_url, port=8125, prefix=stats_prefix)
 
 
 app = Flask(__name__)
-logger.info(f"{our_adjusted_name} and callback is up and ready to go...")
+logger.info(f"{our_adjusted_name} and callback is up and ready to go…")
 
 
 def handle_failed_queue(our_queue_name):
@@ -151,7 +151,7 @@ def job_receiver():
     response_ok_flag, response_dict = check_posted_payload(request, logger)
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
-        logger.debug(f"{our_adjusted_name} queuing good payload...")
+        logger.debug(f"{our_adjusted_name} queuing good payload…")
 
         # Add our fields
         response_dict['door43_webhook_retry_count'] = 0 # In case we want to retry failed jobs
@@ -214,7 +214,7 @@ def callback_receiver():
     response_ok_flag, response_dict = check_posted_callback_payload(request, logger)
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
-        logger.debug(f"{our_adjusted_name} queuing good callback...")
+        logger.debug(f"{our_adjusted_name} queuing good callback…")
 
         # Add our fields
         response_dict['door43_callback_retry_count'] = 0
