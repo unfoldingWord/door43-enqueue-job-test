@@ -14,7 +14,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "No payload found. You must submit a POST request via a DCS webhook notification"
+            'error': "No payload found. You must submit a POST request via a DCS webhook notification."
         }
         self.assertEqual(output, expected)
 
@@ -146,7 +146,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "Commit branch: 'notMaster' is not the default branch."
+            'error': "Commit branch: 'notMaster' is not the default branch (master)."
         }
         self.assertEqual(output, expected)
 
