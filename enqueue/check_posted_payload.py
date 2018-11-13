@@ -16,7 +16,7 @@ def check_posted_payload(request, logger):
     # Bail if this is not a POST with a payload
     if not request.data:
         logger.error("Received request but no payload found")
-        return False, {'error': 'No payload found. You must submit a POST request via a DCS webhook notification'}
+        return False, {'error': 'No payload found. You must submit a POST request via a DCS webhook notification.'}
 
     # Bail if this is not from DCS
     if 'X-Gogs-Event' not in request.headers:
@@ -30,6 +30,7 @@ def check_posted_payload(request, logger):
 
     # Get the json payload and check it
     payload_json = request.get_json()
+    logger.debug(f"Webhook payload is {payload_json}")
 
     # Give a brief but helpful info message for the logs
     try:
@@ -44,8 +45,10 @@ def check_posted_payload(request, logger):
         commit_message = payload_json['commits'][0]['message'].strip() # Seems to always end with a newline
     except (KeyError, AttributeError, TypeError, IndexError):
         commit_message = None
-    if repo_name or pusher_name or commit_message: # Ignore it if they are all None
+    if repo_name or pusher_name:
         logger.info(f"{pusher_name} pushed '{repo_name}' with \"{commit_message}\"")
+    else: # they were all None
+        logger.info(f"No pusher/repo names in payload: {payload_json}")
 
     # Bail if the URL to the repo is invalid
     try:
@@ -66,9 +69,11 @@ def check_posted_payload(request, logger):
         logger.error("No commit branch specified")
         return False, {'error': "No commit branch specified."}
     try:
-        if commit_branch != payload_json['repository']['default_branch']:
-            logger.error(f"Commit branch: {commit_branch!r} is not the default branch")
-            return False, {'error': f"Commit branch: {commit_branch!r} is not the default branch."}
+        default_branch = payload_json['repository']['default_branch']
+        if commit_branch != default_branch:
+            err_msg = f"Commit branch: '{commit_branch}' is not the default branch ({default_branch})"
+            logger.error(err_msg)
+            return False, {'error': err_msg+'.'}
     except KeyError:
         logger.error("No default branch specified")
         return False, {'error': "No default branch specified."}
@@ -106,7 +111,7 @@ def check_posted_callback_payload(request, logger):
     # Bail if this is not a POST with a payload
     if not request.data:
         logger.error("Received request but no payload found")
-        return False, {'error': 'No payload found. You must submit a POST request'}
+        return False, {'error': 'No payload found. You must submit a POST request.'}
 
     # TODO: What headers do we need to check ???
     ## Bail if this is not from tX
@@ -121,7 +126,7 @@ def check_posted_callback_payload(request, logger):
 
     # Get the json payload and check it
     payload_json = request.get_json()
-    logger.debug(f"callback payload is {payload_json}")
+    logger.debug(f"Callback payload is {payload_json}")
 
     # TODO: What info do we need to check and to match to a job
     ## Bail if the URL to the repo is invalid
