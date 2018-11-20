@@ -32,6 +32,7 @@ CALLBACK_URL_SEGMENT = WEBHOOK_URL_SEGMENT + 'tx-callback/'
 
 # Look at relevant environment variables
 prefix = getenv('QUEUE_PREFIX', '') # Gets (optional) QUEUE_PREFIX environment variable -- set to 'dev-' for development
+our_prefixed_name = prefix + OUR_NAME
 
 
 JOB_TIMEOUT = '360s' if prefix else '180s' # Then a running job (taken out of the queue) will be considered to have failed
@@ -50,17 +51,20 @@ logger.setLevel(logging.DEBUG if prefix else logging.INFO)
 
 
 # Setup queue variables
+QUEUE_NAME_SUFFIX = '' # Used to switch to a different queue, e.g., '_1'
 if prefix not in ('', 'dev-'):
     logger.critical(f"Unexpected prefix: {prefix!r} -- expected '' or 'dev-'")
 if prefix:
-    our_adjusted_name = prefix + OUR_NAME # Will become our main queue name
-    other_our_adjusted_name = OUR_NAME # The other queue name
+    our_adjusted_name = our_prefixed_name + QUEUE_NAME_SUFFIX # Will become our main queue name
+    our_adjusted_callback_name = our_prefixed_name + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
+    our_other_adjusted_name = OUR_NAME + QUEUE_NAME_SUFFIX # The other queue name
+    our_other_adjusted_callback_name = OUR_NAME + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
 else:
-    our_adjusted_name = OUR_NAME # Will become our main queue name
-    other_our_adjusted_name = 'dev-'+OUR_NAME # The other queue name
+    our_adjusted_name = OUR_NAME + QUEUE_NAME_SUFFIX # Will become our main queue name
+    our_adjusted_callback_name = OUR_NAME + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
+    our_other_adjusted_name = our_prefixed_name + QUEUE_NAME_SUFFIX # The other queue name
+    our_other_adjusted_callback_name = our_prefixed_name + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
 # NOTE: The prefixed version must also listen at a different port (specified in gunicorn run command)
-our_adjusted_callback_name = our_adjusted_name + CALLBACK_SUFFIX
-other_our_adjusted_callback_name = other_our_adjusted_name + CALLBACK_SUFFIX
 
 
 prefix_string = f" ({prefix})" if prefix else ""
@@ -71,7 +75,7 @@ logger.info(f"enqueueMain.py {prefix_string} running on Python v{sys.version}")
 redis_hostname = getenv('REDIS_HOSTNAME', 'redis')
 logger.info(f"redis_hostname is {redis_hostname!r}")
 # And now connect so it fails at import time if no Redis instance available
-logger.debug(f"{our_adjusted_name} connecting to Redis…")
+logger.debug(f"{our_prefixed_name} connecting to Redis…")
 redis_connection = StrictRedis(host=redis_hostname)
 logger.debug("Getting total worker count in order to verify working Redis connection…")
 total_rq_worker_count = Worker.count(connection=redis_connection)
@@ -86,7 +90,7 @@ stats_client = StatsClient(host=graphite_url, port=8125, prefix=stats_prefix)
 
 
 app = Flask(__name__)
-logger.info(f"{our_adjusted_name} and callback is up and ready to go…")
+logger.info(f"{our_prefixed_name} and callback is up and ready to go…")
 
 
 def handle_failed_queue(our_queue_name):
@@ -128,7 +132,7 @@ def job_receiver():
     """
     #assert request.method == 'POST'
     stats_client.incr('webhook.posts.attempted')
-    logger.info(f"{our_adjusted_name} received webhook request: {request}")
+    logger.info(f"{our_prefixed_name} received webhook request: {request}")
 
     our_queue = Queue(our_adjusted_name, connection=redis_connection)
 
@@ -145,13 +149,13 @@ def job_receiver():
     logger.debug(f"Our {our_adjusted_name} queue workers = {our_queue_worker_count}")
     stats_client.gauge('webhook.workers.available', our_queue_worker_count)
     if our_queue_worker_count < 1:
-        logger.critical(f'{our_adjusted_name} has no job handler workers running!')
+        logger.critical(f'{our_prefixed_name} has no job handler workers running!')
         # Go ahead and queue the job anyway for when a worker is restarted
 
     response_ok_flag, response_dict = check_posted_payload(request, logger)
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
-        logger.debug(f"{our_adjusted_name} queuing good payload…")
+        logger.debug(f"{our_prefixed_name} queuing good payload…")
 
         # Add our fields
         response_dict['door43_webhook_retry_count'] = 0 # In case we want to retry failed jobs
@@ -170,11 +174,11 @@ def job_receiver():
         #logger.debug(f"Our {our_adjusted_name} queue workers ({len(our_queue_workers)}): {our_queue_workers}")
 
         len_our_queue = len(our_queue) # Update
-        other_queue = Queue(other_our_adjusted_name, connection=redis_connection)
-        logger.info(f"{our_adjusted_name} queued valid job to {our_adjusted_name} " \
+        other_queue = Queue(our_other_adjusted_name, connection=redis_connection)
+        logger.info(f"{our_prefixed_name} queued valid job to {our_adjusted_name} queue " \
                     f"({len_our_queue} jobs now " \
                         f"for {Worker.count(queue=our_queue)} workers, " \
-                    f"{len(other_queue)} jobs in {other_our_adjusted_name} queue " \
+                    f"{len(other_queue)} jobs in {our_other_adjusted_name} queue " \
                         f"for {Worker.count(queue=other_queue)} workers, " \
                     f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}")
 
@@ -187,7 +191,7 @@ def job_receiver():
     #else:
     stats_client.incr('webhook.posts.invalid')
     response_dict['status'] = 'invalid'
-    logger.error(f"{our_adjusted_name} ignored invalid payload; responding with {response_dict}")
+    logger.error(f"{our_prefixed_name} ignored invalid payload; responding with {response_dict}")
     return jsonify(response_dict), 400
 # end of job_receiver()
 
@@ -202,7 +206,7 @@ def callback_receiver():
     """
     #assert request.method == 'POST'
     stats_client.incr('callback.posts.attempted')
-    logger.info(f"{our_adjusted_name} received callback request: {request}")
+    logger.info(f"{our_prefixed_name} received callback request: {request}")
 
     # Collect (and log) some helpful information
     our_queue = Queue(our_adjusted_callback_name, connection=redis_connection)
@@ -214,7 +218,7 @@ def callback_receiver():
     response_ok_flag, response_dict = check_posted_callback_payload(request, logger)
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
-        logger.debug(f"{our_adjusted_name} queuing good callback…")
+        logger.debug(f"{our_prefixed_name} queuing good callback…")
 
         # Add our fields
         response_dict['door43_callback_retry_count'] = 0
@@ -238,11 +242,11 @@ def callback_receiver():
         #logger.debug(f"Our {our_adjusted_callback_name} queue workers = {our_queue_worker_count}")
 
         len_our_queue = len(our_queue) # Update
-        other_callback_queue = Queue(other_our_adjusted_callback_name, connection=redis_connection)
-        logger.info(f"{our_adjusted_name} queued valid callback job to {our_adjusted_callback_name} " \
+        other_callback_queue = Queue(our_other_adjusted_callback_name, connection=redis_connection)
+        logger.info(f"{our_prefixed_name} queued valid callback job to {our_adjusted_callback_name} queue " \
                     f"({len_our_queue} jobs now " \
                         f"for {Worker.count(queue=our_queue)} workers, " \
-                    f"{len(other_callback_queue)} jobs in {other_our_adjusted_callback_name} queue " \
+                    f"{len(other_callback_queue)} jobs in {our_other_adjusted_callback_name} queue " \
                         f"for {Worker.count(queue=other_callback_queue)} workers, " \
                     f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}")
 
@@ -255,7 +259,7 @@ def callback_receiver():
     #else:
     stats_client.incr('callback.posts.invalid')
     response_dict['status'] = 'invalid'
-    logger.error(f"{our_adjusted_name} ignored invalid callback payload; responding with {response_dict}")
+    logger.error(f"{our_prefixed_name} ignored invalid callback payload; responding with {response_dict}")
     return jsonify(response_dict), 400
 # end of callback_receiver()
 
