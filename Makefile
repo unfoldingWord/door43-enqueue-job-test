@@ -15,7 +15,7 @@ dependencies:
 	pip3 install --upgrade pip
 	pip3 install --requirement enqueue/requirements.txt
 
-# NOTE: The following environment variables are expected to be set for testing:
+# NOTE: The following environment variables are expected to be set for logging:
 #	AWS_ACCESS_KEY_ID
 #	AWS_SECRET_ACCESS_KEY
 checkEnvVariables:
