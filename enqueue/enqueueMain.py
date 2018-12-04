@@ -47,7 +47,7 @@ CALLBACK_TIMEOUT = '360s' if prefix else '180s' # Then a running callback job (t
 # Get the redis URL from the environment, otherwise use a local test instance
 redis_hostname = getenv('REDIS_HOSTNAME', 'redis')
 # Use this to detect test mode (coz logs will go into a separate AWS CloudWatch stream)
-debug_mode_flag = redis_hostname == 'redis'
+debug_mode_flag = 'gogs' not in redis_hostname # Typically set to 'redis'
 test_string = " (TEST)" if debug_mode_flag else ""
 
 
