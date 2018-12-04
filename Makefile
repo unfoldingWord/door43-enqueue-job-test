@@ -52,11 +52,11 @@ composeEnqueueRedis: checkEnvVariables
 	docker-compose --file docker-compose-enqueue-redis.yaml build
 	docker-compose --file docker-compose-enqueue-redis.yaml up
 
-imageDev: checkEnvVariables
+imageDev:
 	# NOTE: This build sets the prefix to 'dev-' and sets debug mode
 	docker build --file enqueue/Dockerfile-developBranch --tag unfoldingword/door43_enqueue_job:develop enqueue
 
-imageMaster: checkEnvVariables
+imageMaster:
 	docker build --file enqueue/Dockerfile-masterBranch --tag unfoldingword/door43_enqueue_job:master enqueue
 
 pushDevImage:
