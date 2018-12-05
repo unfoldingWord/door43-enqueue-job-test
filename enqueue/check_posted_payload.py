@@ -25,7 +25,7 @@ def check_posted_payload(request, logger):
 
     # Bail if this is not a push event
     if not request.headers['X-Gogs-Event'] == 'push':
-        logger.error(f"X-Gogs-Event {request.headers['X-Gogs-Event']!r} is not a push")
+        logger.error(f"X-Gogs-Event '{request.headers['X-Gogs-Event']}' is not a push")
         return False, {'error': 'This does not appear to be a push.'}
 
     # Get the json payload and check it
@@ -53,7 +53,7 @@ def check_posted_payload(request, logger):
     # Bail if the URL to the repo is invalid
     try:
         if not payload_json['repository']['html_url'].startswith(GOGS_URL):
-            logger.error(f"The repo at {payload_json['repository']['html_url']!r} does not belong to {GOGS_URL!r}")
+            logger.error(f"The repo at '{payload_json['repository']['html_url']}' does not belong to '{GOGS_URL}'")
             return False, {'error': f'The repo does not belong to {GOGS_URL}.'}
     except KeyError:
         logger.error("No repo URL specified")
@@ -132,7 +132,7 @@ def check_posted_callback_payload(request, logger):
     ## Bail if the URL to the repo is invalid
     #try:
         #if not payload_json['repository']['html_url'].startswith(GOGS_URL):
-            #logger.error(f"The repo at {payload_json['repository']['html_url']!r} does not belong to {GOGS_URL!r}")
+            #logger.error(f"The repo at '{payload_json['repository']['html_url']}' does not belong to '{GOGS_URL}')
             #return False, {'error': f'The repo does not belong to {GOGS_URL}.'}
     #except KeyError:
         #logger.error("No repo URL specified")
