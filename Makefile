@@ -34,7 +34,7 @@ checkEnvVariables:
 #	QUEUE_PREFIX (set it to dev- for testing)
 #	FLASK_ENV (can be set to "development" for testing)
 test: checkEnvVariables
-	PYTHONPATH="enqueue/" python3 -m unittest discover -s tests/
+	TEST_MODE="TEST" PYTHONPATH="enqueue/" python3 -m unittest discover -s tests/
 
 runFlask: checkEnvVariables
 	# NOTE: For very preliminary testing only (unless REDIS_HOSTNAME is already set-up)
