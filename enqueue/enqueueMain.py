@@ -41,7 +41,7 @@ prefixed_our_name = prefix + OUR_NAME
 JOB_TIMEOUT = '360s' if prefix else '180s' # Then a running job (taken out of the queue) will be considered to have failed
     # NOTE: This is only the time until webhook.py returns after preprocessing and submitting the job
     #           -- the actual conversion jobs might still be running.
-CALLBACK_TIMEOUT = '360s' if prefix else '180s' # Then a running callback job (taken out of the queue) will be considered to have failed
+CALLBACK_TIMEOUT = '480s' if prefix else '240s' # Then a running callback job (taken out of the queue) will be considered to have failed
 
 
 # Get the redis URL from the environment, otherwise use a local test instance
