@@ -144,7 +144,7 @@ def handle_failed_queue(our_queue_name):
     if len_our_failed_queue:
         logger.info(f"Have {len_our_failed_queue} of our jobs in failed queue")
     return len_our_failed_queue
-# end of function handle_failed_queue
+# end of handle_failed_queue function
 
 
 # This is the main workhorse part of this code
@@ -191,7 +191,7 @@ def job_receiver():
         # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
         #           (For now at least, we prefer them to just stay in the queue if they're not getting processed.)
         #       The timeout value determines the max run time of the worker once the job is accessed
-        our_queue.enqueue('webhook.job', response_dict, timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
+        our_queue.enqueue('webhook.job', response_dict, job_timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
         # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
 
         # Find out who our workers are
@@ -253,7 +253,7 @@ def callback_receiver():
         # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
         #           (For now at least, we prefer them to just stay in the queue if they're not getting processed.)
         #       The timeout value determines the max run time of the worker once the job is accessed
-        our_queue.enqueue('callback.job', response_dict, timeout=CALLBACK_TIMEOUT) # A function named callback.job will be called by the worker
+        our_queue.enqueue('callback.job', response_dict, job_timeout=CALLBACK_TIMEOUT) # A function named callback.job will be called by the worker
         # NOTE: The above line can return a result from the callback.job function. (By default, the result remains available for 500s.)
 
         # Find out who our workers are
