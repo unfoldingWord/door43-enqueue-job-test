@@ -36,6 +36,7 @@ CALLBACK_URL_SEGMENT = WEBHOOK_URL_SEGMENT + 'tx-callback/'
 # Look at relevant environment variables
 prefix = getenv('QUEUE_PREFIX', '') # Gets (optional) QUEUE_PREFIX environment variable -- set to 'dev-' for development
 prefixed_our_name = prefix + OUR_NAME
+echo_prodn_to_dev_flag = False
 
 
 # NOTE: Large lexicons like UGL and UAHL seem to be the longest-running jobs
@@ -184,6 +185,24 @@ def job_receiver():
     if response_ok_flag:
         logger.debug(f"{prefixed_our_name} queuing good payload…")
 
+        # Check for special switch to echo production requests to dev- chain
+        global echo_prodn_to_dev_flag
+        if not prefix: # Only apply to production chain
+            try:
+                repo_name = response_dict['repository']['full_name']
+            except (KeyError, AttributeError):
+                repo_name = None
+            if repo_name == 'tx-manager-test-data/echo_prodn_to_dev_on':
+                echo_prodn_to_dev_flag = True
+                logger.info("TURNED ON 'echo_prodn_to_dev_flag'!")
+                stats_client.incr('webhook.posts.succeeded')
+                return jsonify({'success': 'true', 'status': 'echo ON'})
+            if repo_name == 'tx-manager-test-data/echo_prodn_to_dev_off':
+                echo_prodn_to_dev_flag = False
+                logger.info("Turned off 'echo_prodn_to_dev_flag'.")
+                stats_client.incr('webhook.posts.succeeded')
+                return jsonify({'success': 'true', 'status': 'echo off'})
+
         # Add our fields
         response_dict['door43_webhook_retry_count'] = 0 # In case we want to retry failed jobs
         response_dict['door43_webhook_received_at'] = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ') # Used to calculate total elapsed time
@@ -194,6 +213,12 @@ def job_receiver():
         our_queue.enqueue('webhook.job', response_dict, job_timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
         # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
 
+        # See if we want to echo this job to the dev- queue
+        other_queue = Queue(our_other_adjusted_name, connection=redis_connection)
+        if echo_prodn_to_dev_flag:
+            logger.info(f"Also echoing job to {our_other_adjusted_name} queue…")
+            other_queue.enqueue('webhook.job', response_dict, job_timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
+
         # Find out who our workers are
         #workers = Worker.all(connection=redis_connection) # Returns the actual worker objects
         #logger.debug(f"Total rq workers ({len(workers)}): {workers}")
@@ -201,7 +226,6 @@ def job_receiver():
         #logger.debug(f"Our {our_adjusted_name} queue workers ({len(our_queue_workers)}): {our_queue_workers}")
 
         len_our_queue = len(our_queue) # Update
-        other_queue = Queue(our_other_adjusted_name, connection=redis_connection)
         logger.info(f"{prefixed_our_name} queued valid job to {our_adjusted_name} queue " \
                     f"({len_our_queue} jobs now " \
                         f"for {Worker.count(queue=our_queue)} workers, " \
