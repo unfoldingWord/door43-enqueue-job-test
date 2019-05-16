@@ -82,12 +82,12 @@ logger.info(f"Logging to AWS CloudWatch group '{log_group_name}' using key '…{
 QUEUE_NAME_SUFFIX = '' # Used to switch to a different queue, e.g., '_1'
 if prefix not in ('', DEV_PREFIX):
     logger.critical(f"Unexpected prefix: '{prefix}' -- expected '' or '{DEV_PREFIX}'")
-if prefix:
+if prefix: # don't use production queue
     our_adjusted_name = prefixed_our_name + QUEUE_NAME_SUFFIX # Will become our main queue name
     our_adjusted_callback_name = prefixed_our_name + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
     our_other_adjusted_name = OUR_NAME + QUEUE_NAME_SUFFIX # The other queue name
     our_other_adjusted_callback_name = OUR_NAME + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
-else:
+else: # production code
     our_adjusted_name = OUR_NAME + QUEUE_NAME_SUFFIX # Will become our main queue name
     our_adjusted_callback_name = OUR_NAME + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
     our_other_adjusted_name = DEV_PREFIX + our_adjusted_name # The other queue name
@@ -197,12 +197,12 @@ def job_receiver():
                 echo_prodn_to_dev_flag = True
                 logger.info("TURNED ON 'echo_prodn_to_dev_flag'!")
                 stats_client.incr('webhook.posts.succeeded')
-                return jsonify({'success': 'true', 'status': 'echo ON'})
+                return jsonify({'success': True, 'status': 'echo ON'})
             if repo_name == 'tx-manager-test-data/echo_prodn_to_dev_off':
                 echo_prodn_to_dev_flag = False
                 logger.info("Turned off 'echo_prodn_to_dev_flag'.")
                 stats_client.incr('webhook.posts.succeeded')
-                return jsonify({'success': 'true', 'status': 'echo off'})
+                return jsonify({'success': True, 'status': 'echo off'})
 
         # Add our fields
         response_dict['door43_webhook_retry_count'] = 0 # In case we want to retry failed jobs
@@ -217,7 +217,7 @@ def job_receiver():
         # See if we want to echo this job to the dev- queue
         other_queue = Queue(our_other_adjusted_name, connection=redis_connection)
         if echo_prodn_to_dev_flag:
-            logger.info(f"Also echoing job to {our_other_adjusted_name} queue…")
+            logger.info(f"ALSO ECHOING JOB to {our_other_adjusted_name} queue…")
             other_queue.enqueue('webhook.job', response_dict, job_timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
 
         # Find out who our workers are
@@ -234,7 +234,7 @@ def job_receiver():
                         f"for {Worker.count(queue=other_queue)} workers, " \
                     f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}")
 
-        webhook_return_dict = {'success': 'true',
+        webhook_return_dict = {'success': True,
                                'status': 'queued',
                                'queue_name': our_adjusted_name,
                                'door43_job_queued_at': datetime.utcnow()}
@@ -302,7 +302,7 @@ def callback_receiver():
                         f"for {Worker.count(queue=other_callback_queue)} workers, " \
                     f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}")
 
-        callback_return_dict = {'success': 'true',
+        callback_return_dict = {'success': True,
                                 'status': 'queued',
                                 'queue_name': our_adjusted_callback_name,
                                 'door43_callback_queued_at': datetime.utcnow()}
