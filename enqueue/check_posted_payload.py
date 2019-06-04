@@ -63,7 +63,7 @@ def check_posted_payload(request, logger):
     try:
         commit_branch = payload_json['ref'].split('/')[2]
     except (IndexError, AttributeError):
-        logger.error(f"Could not determine commit branch from {payload_json['ref']}")
+        logger.error(f"Could not determine commit branch from '{payload_json['ref']}'")
         return False, {'error': 'Could not determine commit branch.'}
     except KeyError:
         logger.error("No commit branch specified")
@@ -72,8 +72,12 @@ def check_posted_payload(request, logger):
         default_branch = payload_json['repository']['default_branch']
         if commit_branch != default_branch:
             err_msg = f"Commit branch: '{commit_branch}' is not the default branch ({default_branch})"
-            logger.error(err_msg)
-            return False, {'error': err_msg+'.'}
+            # Suppress this particular case
+            if commit_branch=='TESTING' and not repo_name and not pusher_username:
+                return False, {'error': "This appears to be a ping for testing."}
+            else:
+                logger.error(err_msg)
+                return False, {'error': err_msg+'.'}
     except KeyError:
         logger.error("No default branch specified")
         return False, {'error': "No default branch specified."}
