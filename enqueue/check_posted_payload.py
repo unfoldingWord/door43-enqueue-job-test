@@ -11,26 +11,36 @@ def check_posted_payload(request, logger):
 
     Returns a 2-tuple:
         True or False if payload checks out
-        The payload that was checked or error dict
+        Either the payload that was checked (if returning True above),
+            or the error dict (if returning False above)
     """
     # Bail if this is not a POST with a payload
     if not request.data:
         logger.error("Received request but no payload found")
         return False, {'error': 'No payload found. You must submit a POST request via a DCS webhook notification.'}
 
+
     # Bail if this is not from DCS
     if 'X-Gogs-Event' not in request.headers:
         logger.error(f"No 'X-Gogs-Event' in {request.headers}")
         return False, {'error': 'This does not appear to be from DCS.'}
+
 
     # Bail if this is not a push event
     if not request.headers['X-Gogs-Event'] == 'push':
         logger.error(f"X-Gogs-Event '{request.headers['X-Gogs-Event']}' is not a push")
         return False, {'error': 'This does not appear to be a push.'}
 
+
     # Get the json payload and check it
     payload_json = request.get_json()
     logger.debug(f"Webhook payload is {payload_json}")
+    # Typical keys are: secret, ref, before, after, compare_url,
+    #                               commits, (head_commit), repository, pusher, sender
+    # logger.debug("Webhook payload:")
+    # for payload_key, payload_entry in payload_json.items():
+    #     logger.debug(f"  {payload_key}: {payload_entry!r}")
+
 
     # Give a brief but helpful info message for the logs
     try:
@@ -41,14 +51,23 @@ def check_posted_payload(request, logger):
         pusher_username = payload_json['pusher']['username']
     except (KeyError, AttributeError):
         pusher_username = None
+
+    commit_messages = []
     try:
-        commit_message = payload_json['commits'][0]['message'].strip() # Seems to always end with a newline
+        # Assemble a string of commit messages
+        # commit_message = payload_json['commits'][0]['message'].strip() # Seems to always end with a newline
+        for commit_dict in payload_json['commits']:
+            this_commit_message = commit_dict['message'].strip() # Seems to always end with a newline
+            commit_messages.append(f'"{this_commit_message}"')
+        commit_message = ', '.join(commit_messages)
     except (KeyError, AttributeError, TypeError, IndexError):
         commit_message = None
+
     if repo_name or pusher_username:
-        logger.info(f"{pusher_username} pushed '{repo_name}' with \"{commit_message}\"")
+        logger.info(f"{pusher_username} pushed '{repo_name}' with ({len(commit_messages)}) {commit_message}")
     else: # they were all None
         logger.info(f"No pusher/repo names in payload: {payload_json}")
+
 
     # Bail if the URL to the repo is invalid
     try:
@@ -58,6 +77,7 @@ def check_posted_payload(request, logger):
     except KeyError:
         logger.error("No repo URL specified")
         return False, {'error': 'No repo URL specified.'}
+
 
     # Bail if the commit branch is not the default branch
     try:
@@ -77,7 +97,7 @@ def check_posted_payload(request, logger):
                 return False, {'error': "This appears to be a ping for testing."}
             else:
                 logger.error(err_msg)
-                return False, {'error': err_msg+'.'}
+                return False, {'error': f"{err_msg}."}
     except KeyError:
         logger.error("No default branch specified")
         return False, {'error': "No default branch specified."}
