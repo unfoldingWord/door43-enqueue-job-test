@@ -50,7 +50,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "This does not appear to be a push."
+            'error': "This does not appear to be a push or release."
         }
         self.assertEqual(output, expected)
 
