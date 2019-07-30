@@ -94,7 +94,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "No commit branch specified."
+            'error': "No commits specified."
         }
         self.assertEqual(output, expected)
 
@@ -111,7 +111,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "Could not determine commit branch."
+            'error': "No commits specified."
         }
         self.assertEqual(output, expected)
 
@@ -128,11 +128,11 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "No default branch specified."
+            'error': "No commits specified."
         }
         self.assertEqual(output, expected)
 
-    def test_wrong_commit_branch(self):
+    def test_different_commit_branch(self):
         headers = {'X-Gitea-Event':'push'}
         payload_json = {
             'ref':'refs/heads/notMaster',
@@ -146,7 +146,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "Commit branch: 'notMaster' is not the default branch (master)."
+            'error': "No commits specified."
         }
         self.assertEqual(output, expected)
 
@@ -185,6 +185,21 @@ class TestPayloadCheck(TestCase):
         expected = False, {
             'error': "No commits found."
         }
+        self.assertEqual(output, expected)
+
+    def test_empty_release(self):
+        headers = {'X-Gitea-Event':'release'}
+        payload_json = {
+            'action': 'published',
+            'repository':{
+                'html_url':'https://git.door43.org/whatever',
+                },
+            }
+        mock_request = Mock(**{'get_json.return_value':payload_json})
+        mock_request.headers = headers
+        mock_request.data = payload_json
+        output = check_posted_payload(mock_request, logging)
+        expected = True, payload_json
         self.assertEqual(output, expected)
 
     def test_basic_json_success(self):
