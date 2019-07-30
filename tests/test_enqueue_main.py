@@ -51,7 +51,7 @@ from redis import exceptions as redis_exceptions
             #self.assertEqual(response_dict, expected_dict)
 
     #def test_webhook_with_bad_payload(self):
-        #headers = {'Content-type': 'application/json', 'X-Gogs-Event': 'push'}
+        #headers = {'Content-type': 'application/json', 'X-Gitea-Event': 'push'}
         #payload_json = {'something': 'anything',}
         #if redis_hostname == 'redis': # Using a (missing) local instance so won't all work
             #with self.assertRaises(redis_exceptions.ConnectionError):
@@ -65,7 +65,7 @@ from redis import exceptions as redis_exceptions
             #self.assertEqual(response_dict, expected_dict)
 
     #def test_webhook_with_minimal_json_payload(self):
-        #headers = {'Content-type': 'application/json', 'X-Gogs-Event': 'push'}
+        #headers = {'Content-type': 'application/json', 'X-Gitea-Event': 'push'}
         #payload_json = {
             #'ref': 'refs/heads/master',
             #'repository': {
@@ -85,7 +85,7 @@ from redis import exceptions as redis_exceptions
             #self.assertEqual(response_dict['status'], 'queued')
 
     #def test_webhook_with_typical_full_json_payload(self):
-        #headers = {'Content-type': 'application/json', 'X-Gogs-Event': 'push'}
+        #headers = {'Content-type': 'application/json', 'X-Gitea-Event': 'push'}
         #with open( 'tests/Resources/webhook_post.json', 'rt' ) as json_file:
             #payload_json = json.load(json_file)
         #if redis_hostname == 'redis': # Using a (missing) local instance so won't all work

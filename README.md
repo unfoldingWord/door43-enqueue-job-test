@@ -78,7 +78,7 @@ but with nginx facing the outside world.
 
 Use `make composeEnqueueRedis` as above.
 The door43_job_handler also needs to be running.
-Use a command like `curl -v http://127.0.0.1:8080/ -d @<path-to>/payload.json --header "Content-Type: application/json" --header "X-Gogs-Event: push"` to queue a job, and if successful, you should receive a JSON response.
+Use a command like `curl -v http://127.0.0.1:8080/ -d @<path-to>/payload.json --header "Content-Type: application/json" --header "X-Gitea-Event: push"` to queue a job, and if successful, you should receive a JSON response.
 
 
 ## Deployment
