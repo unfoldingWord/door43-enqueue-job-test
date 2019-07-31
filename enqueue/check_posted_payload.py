@@ -19,19 +19,23 @@ def check_posted_payload(request, logger):
         logger.error("Received request but no payload found")
         return False, {'error': 'No payload found. You must submit a POST request via a DCS webhook notification.'}
 
+    # Check for a test ping from Nagios
+    if 'User-Agent' in request.headers and 'nagios-plugins' in request.headers['User-Agent'] \
+    and 'X-Gogs-Event' in request.headers and request.headers['X-Gogs-Event'] == 'push':
+        return False, {'error': "This appears to be a Nagios ping for testing."}
 
     # Bail if this is not from DCS
     if 'X-Gitea-Event' not in request.headers:
         logger.error(f"No 'X-Gitea-Event' in {request.headers}")
         return False, {'error': 'This does not appear to be from DCS.'}
     event_type = request.headers['X-Gitea-Event']
+    logger.info(f"Got a '{event_type}' event from DCS")
 
     # Bail if this is not a push or release event
     if event_type not in ('push','release'):
         logger.error(f"X-Gitea-Event '{event_type}' is not a push or release")
         return False, {'error': 'This does not appear to be a push or release.'}
-    logger.info(f"Got a '{event_type}' event from DCS")
-    event_name = {'push':'pushed', 'release':'released'}[event_type]
+    our_event_name = {'push':'pushed', 'release':'released'}[event_type]
 
     # Get the json payload and check it
     payload_json = request.get_json()
@@ -59,7 +63,6 @@ def check_posted_payload(request, logger):
     commit_messages = []
     try:
         # Assemble a string of commit messages
-        # commit_message = payload_json['commits'][0]['message'].strip() # Seems to always end with a newline
         for commit_dict in payload_json['commits']:
             this_commit_message = commit_dict['message'].strip() # Seems to always end with a newline
             commit_messages.append(f'"{this_commit_message}"')
@@ -67,12 +70,17 @@ def check_posted_payload(request, logger):
     except (KeyError, AttributeError, TypeError, IndexError):
         commit_message = None
 
+    try:
+        extra_info = f" with ({len(commit_messages)}) {commit_message}" if event_type=='push' \
+                    else f" with '{payload_json['release']['name']}'"
+    except (KeyError, AttributeError):
+        extra_info = ""
     if pusher_username:
-        logger.info(f"{pusher_username} {event_name} '{repo_name}' with ({len(commit_messages)}) {commit_message}")
+        logger.info(f"{pusher_username} {our_event_name} '{repo_name}'{extra_info}")
     elif sender_username:
-        logger.info(f"{sender_username} {event_name} '{repo_name}' with ({len(commit_messages)}) {commit_message}")
+        logger.info(f"{sender_username} {our_event_name} '{repo_name}'{extra_info}")
     elif repo_name:
-        logger.info(f"UNKNOWN {event_name} '{repo_name}' with ({len(commit_messages)}) {commit_message}")
+        logger.info(f"UNKNOWN {our_event_name} '{repo_name}'{extra_info}")
     else: # they were all None
         logger.info(f"No pusher/sender/repo name in payload: {payload_json}")
 
@@ -88,31 +96,32 @@ def check_posted_payload(request, logger):
 
 
     if event_type == 'push':
-        # Bail if the commit branch is not the default branch
-        try:
-            commit_branch = payload_json['ref'].split('/')[2]
-        except (IndexError, AttributeError):
-            logger.error(f"Could not determine commit branch from '{payload_json['ref']}'")
-            return False, {'error': 'Could not determine commit branch.'}
-        except KeyError:
-            logger.error("No commit branch specified")
-            return False, {'error': "No commit branch specified."}
-        try:
-            default_branch = payload_json['repository']['default_branch']
-            if commit_branch != default_branch:
-                err_msg = f"Commit branch: '{commit_branch}' is not the default branch ({default_branch})"
-                # Suppress this particular case
-                if commit_branch=='TESTING' and not repo_name and not pusher_username:
-                    return False, {'error': "This appears to be a ping for testing."}
-                else:
-                    logger.error(err_msg)
-                    return False, {'error': f"{err_msg}."}
-        except KeyError:
-            logger.error("No default branch specified")
-            return False, {'error': "No default branch specified."}
+        # # Bail if the commit branch is not the default branch
+        # try:
+        #     commit_branch = payload_json['ref'].split('/')[2]
+        # except (IndexError, AttributeError):
+        #     logger.error(f"Could not determine commit branch from '{payload_json['ref']}'")
+        #     return False, {'error': 'Could not determine commit branch.'}
+        # except KeyError:
+        #     logger.error("No commit branch specified")
+        #     return False, {'error': "No commit branch specified."}
+        # try:
+        #     default_branch = payload_json['repository']['default_branch']
+        #     if commit_branch != default_branch:
+        #         err_msg = f"Commit branch: '{commit_branch}' is not the default branch ({default_branch})"
+        #         # Suppress this particular case
+        #         if commit_branch=='TESTING' and not repo_name and not pusher_username:
+        #             return False, {'error': "This appears to be a ping for testing."}
+        #         else:
+        #             logger.error(err_msg)
+        #             return False, {'error': f"{err_msg}."}
+        # except KeyError:
+        #     logger.error("No default branch specified")
+        #     return False, {'error': "No default branch specified."}
 
         # Bail if this is not an actual commit
         # NOTE: What are these notifications??? 'before' and 'after' have the same commit id
+        #   Even test/fake deliveries usually have a commit specified (even if after==before)
         try:
             if not payload_json['commits']:
                 logger.error("No commits found")
@@ -152,9 +161,21 @@ def check_posted_callback_payload(request, logger):
         return False, {'error': 'No payload found. You must submit a POST request.'}
 
     # Get the json payload and check it
-    payload_json = request.get_json()
-    logger.debug(f"Callback payload is {payload_json}")
+    callback_payload_json = request.get_json()
+    logger.debug(f"Callback payload is {callback_payload_json}")
+
+    if 'job_id' not in callback_payload_json or not callback_payload_json['job_id']:
+        logger.error("No callback job_id specified")
+        return False, {'error': "No callback job_id specified."}
+
+    # Display some helpful info in the logs
+    if 'status' in callback_payload_json and 'identifier' in callback_payload_json and callback_payload_json['identifier']:
+        logger.info(f"Received '{callback_payload_json['status']}' callback for {callback_payload_json['identifier']}")
+    if 'linter_warnings' in callback_payload_json and 'linter_success' in callback_payload_json:
+        logger.info(f"linter_success={callback_payload_json['linter_success']} with {len(callback_payload_json['linter_warnings'])} warnings")
+    if 'success' in callback_payload_json and 'converter_warnings' in callback_payload_json and 'converter_errors' in callback_payload_json:
+        logger.info(f"success={callback_payload_json['success']} with {len(callback_payload_json['converter_errors'])} converter errors and {len(callback_payload_json['converter_warnings'])} warnings")
 
     logger.debug("Door43 callback payload seems ok")
-    return True, payload_json
+    return True, callback_payload_json
 # end of check_posted_callback_payload
