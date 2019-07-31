@@ -70,12 +70,17 @@ def check_posted_payload(request, logger):
     except (KeyError, AttributeError, TypeError, IndexError):
         commit_message = None
 
+    try:
+        extra_info = f" with ({len(commit_messages)}) {commit_message}" if event_type=='push' \
+                    else f" with '{payload_json['release']['name']}'"
+    except (KeyError, AttributeError):
+        extra_info = ""
     if pusher_username:
-        logger.info(f"{pusher_username} {our_event_name} '{repo_name}' with ({len(commit_messages)}) {commit_message}")
+        logger.info(f"{pusher_username} {our_event_name} '{repo_name}'{extra_info}")
     elif sender_username:
-        logger.info(f"{sender_username} {our_event_name} '{repo_name}' with ({len(commit_messages)}) {commit_message}")
+        logger.info(f"{sender_username} {our_event_name} '{repo_name}'{extra_info}")
     elif repo_name:
-        logger.info(f"UNKNOWN {our_event_name} '{repo_name}' with ({len(commit_messages)}) {commit_message}")
+        logger.info(f"UNKNOWN {our_event_name} '{repo_name}'{extra_info}")
     else: # they were all None
         logger.info(f"No pusher/sender/repo name in payload: {payload_json}")
 
@@ -116,6 +121,7 @@ def check_posted_payload(request, logger):
 
         # Bail if this is not an actual commit
         # NOTE: What are these notifications??? 'before' and 'after' have the same commit id
+        #   Even test/fake deliveries usually have a commit specified (even if after==before)
         try:
             if not payload_json['commits']:
                 logger.error("No commits found")
@@ -155,9 +161,21 @@ def check_posted_callback_payload(request, logger):
         return False, {'error': 'No payload found. You must submit a POST request.'}
 
     # Get the json payload and check it
-    payload_json = request.get_json()
-    logger.debug(f"Callback payload is {payload_json}")
+    callback_payload_json = request.get_json()
+    logger.debug(f"Callback payload is {callback_payload_json}")
+
+    if 'job_id' not in callback_payload_json or not callback_payload_json['job_id']:
+        logger.error("No callback job_id specified")
+        return False, {'error': "No callback job_id specified."}
+
+    # Display some helpful info in the logs
+    if 'status' in callback_payload_json and 'identifier' in callback_payload_json and callback_payload_json['identifier']:
+        logger.info(f"Received '{callback_payload_json['status']}' callback for {callback_payload_json['identifier']}")
+    if 'linter_warnings' in callback_payload_json and 'linter_success' in callback_payload_json:
+        logger.info(f"linter_success={callback_payload_json['linter_success']} with {len(callback_payload_json['linter_warnings'])} warnings")
+    if 'success' in callback_payload_json and 'converter_warnings' in callback_payload_json and 'converter_errors' in callback_payload_json:
+        logger.info(f"success={callback_payload_json['success']} with {len(callback_payload_json['converter_errors'])} converter errors and {len(callback_payload_json['converter_warnings'])} warnings")
 
     logger.debug("Door43 callback payload seems ok")
-    return True, payload_json
+    return True, callback_payload_json
 # end of check_posted_callback_payload
