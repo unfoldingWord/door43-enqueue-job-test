@@ -239,6 +239,8 @@ def job_receiver():
                                'status': 'queued',
                                'queue_name': our_adjusted_name,
                                'door43_job_queued_at': datetime.utcnow()}
+        if echo_prodn_to_dev_flag:
+            webhook_return_dict['echoed_queue_name'] = our_other_adjusted_name
         stats_client.incr('webhook.posts.succeeded')
         return jsonify(webhook_return_dict)
     #else:
