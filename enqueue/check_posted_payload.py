@@ -29,13 +29,7 @@ def check_posted_payload(request, logger):
         logger.error(f"No 'X-Gitea-Event' in {request.headers}")
         return False, {'error': 'This does not appear to be from DCS.'}
     event_type = request.headers['X-Gitea-Event']
-    logger.info(f"Got a '{event_type}' event from DCS")
-
-    # Bail if this is not a push or release event
-    if event_type not in ('push','release'):
-        logger.error(f"X-Gitea-Event '{event_type}' is not a push or release")
-        return False, {'error': 'This does not appear to be a push or release.'}
-    our_event_name = {'push':'pushed', 'release':'released'}[event_type]
+    logger.info(f"Got a '{event_type}' event from DCS") # Shows in prodn logs
 
     # Get the json payload and check it
     payload_json = request.get_json()
@@ -45,6 +39,14 @@ def check_posted_payload(request, logger):
     # logger.debug("Webhook payload:")
     # for payload_key, payload_entry in payload_json.items():
     #     logger.debug(f"  {payload_key}: {payload_entry!r}")
+
+    # Bail if this is not a push or release event
+    #   Others include 'create'
+    if event_type not in ('push','release'):
+        logger.error(f"X-Gitea-Event '{event_type}' is not a push or release")
+        logger.info(f"Payload for {event_type} is {payload_json}") # Shows in prodn logs
+        return False, {'error': 'This does not appear to be a push or release.'}
+    our_event_name = {'push':'pushed', 'release':'released'}[event_type]
 
     # Give a brief but helpful info message for the logs
     try:
@@ -126,8 +128,8 @@ def check_posted_payload(request, logger):
             if not payload_json['commits']:
                 logger.error("No commits found")
                 try:
-                    logger.info(f"BEFORE is {payload_json['before']}")
-                    logger.info(f"AFTER  is {payload_json['after']}")
+                    logger.debug(f"BEFORE is {payload_json['before']}")
+                    logger.debug(f"AFTER  is {payload_json['after']}")
                 except KeyError:
                     pass
                 return False, {'error': "No commits found."}

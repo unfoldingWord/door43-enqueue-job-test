@@ -195,12 +195,12 @@ def job_receiver():
                 repo_name = None
             if repo_name == 'tx-manager-test-data/echo_prodn_to_dev_on':
                 echo_prodn_to_dev_flag = True
-                logger.info("TURNED ON 'echo_prodn_to_dev_flag'!")
+                logger.info("TURNED ON 'echo_prodn_to_dev_flag'!\n\n")
                 stats_client.incr('webhook.posts.succeeded')
                 return jsonify({'success': True, 'status': 'echo ON'})
             if repo_name == 'tx-manager-test-data/echo_prodn_to_dev_off':
                 echo_prodn_to_dev_flag = False
-                logger.info("Turned off 'echo_prodn_to_dev_flag'.")
+                logger.info("Turned off 'echo_prodn_to_dev_flag'.\n\n")
                 stats_client.incr('webhook.posts.succeeded')
                 return jsonify({'success': True, 'status': 'echo off'})
 
@@ -214,10 +214,11 @@ def job_receiver():
         our_queue.enqueue('webhook.job', response_dict, job_timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
         # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
 
-        # See if we want to echo this job to the dev- queue
+        # See if we want to echo this job to the dev- queue (used for dev- code testing)
         other_queue = Queue(our_other_adjusted_name, connection=redis_connection)
         if echo_prodn_to_dev_flag:
             logger.info(f"ALSO ECHOING JOB to {our_other_adjusted_name} queue…")
+            response_dict['echoed_from_production'] = True
             other_queue.enqueue('webhook.job', response_dict, job_timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
 
         # Find out who our workers are
@@ -232,7 +233,7 @@ def job_receiver():
                         f"for {Worker.count(queue=our_queue)} workers, " \
                     f"{len(other_queue)} jobs in {our_other_adjusted_name} queue " \
                         f"for {Worker.count(queue=other_queue)} workers, " \
-                    f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}")
+                    f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}\n\n")
 
         webhook_return_dict = {'success': True,
                                'status': 'queued',
@@ -243,7 +244,7 @@ def job_receiver():
     #else:
     stats_client.incr('webhook.posts.invalid')
     response_dict['status'] = 'invalid'
-    logger.error(f"{prefixed_our_name} ignored invalid payload; responding with {response_dict}")
+    logger.error(f"{prefixed_our_name} ignored invalid payload; responding with {response_dict}\n\n")
     return jsonify(response_dict), 400
 # end of job_receiver()
 
@@ -300,7 +301,7 @@ def callback_receiver():
                         f"for {Worker.count(queue=our_queue)} workers, " \
                     f"{len(other_callback_queue)} jobs in {our_other_adjusted_callback_name} queue " \
                         f"for {Worker.count(queue=other_callback_queue)} workers, " \
-                    f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}")
+                    f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}\n\n")
 
         callback_return_dict = {'success': True,
                                 'status': 'queued',
