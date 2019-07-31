@@ -195,12 +195,12 @@ def job_receiver():
                 repo_name = None
             if repo_name == 'tx-manager-test-data/echo_prodn_to_dev_on':
                 echo_prodn_to_dev_flag = True
-                logger.info("TURNED ON 'echo_prodn_to_dev_flag'!\n\n")
+                logger.info("TURNED ON 'echo_prodn_to_dev_flag'!\n")
                 stats_client.incr('webhook.posts.succeeded')
                 return jsonify({'success': True, 'status': 'echo ON'})
             if repo_name == 'tx-manager-test-data/echo_prodn_to_dev_off':
                 echo_prodn_to_dev_flag = False
-                logger.info("Turned off 'echo_prodn_to_dev_flag'.\n\n")
+                logger.info("Turned off 'echo_prodn_to_dev_flag'.\n")
                 stats_client.incr('webhook.posts.succeeded')
                 return jsonify({'success': True, 'status': 'echo off'})
 
@@ -233,7 +233,7 @@ def job_receiver():
                         f"for {Worker.count(queue=our_queue)} workers, " \
                     f"{len(other_queue)} jobs in {our_other_adjusted_name} queue " \
                         f"for {Worker.count(queue=other_queue)} workers, " \
-                    f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}\n\n")
+                    f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}\n")
 
         webhook_return_dict = {'success': True,
                                'status': 'queued',
@@ -244,7 +244,7 @@ def job_receiver():
     #else:
     stats_client.incr('webhook.posts.invalid')
     response_dict['status'] = 'invalid'
-    logger.error(f"{prefixed_our_name} ignored invalid payload; responding with {response_dict}\n\n")
+    logger.error(f"{prefixed_our_name} ignored invalid payload; responding with {response_dict}\n")
     return jsonify(response_dict), 400
 # end of job_receiver()
 
@@ -301,7 +301,7 @@ def callback_receiver():
                         f"for {Worker.count(queue=our_queue)} workers, " \
                     f"{len(other_callback_queue)} jobs in {our_other_adjusted_callback_name} queue " \
                         f"for {Worker.count(queue=other_callback_queue)} workers, " \
-                    f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}\n\n")
+                    f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}\n")
 
         callback_return_dict = {'success': True,
                                 'status': 'queued',
