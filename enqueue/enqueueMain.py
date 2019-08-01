@@ -314,7 +314,7 @@ def callback_receiver():
     #else:
     stats_client.incr('callback.posts.invalid')
     response_dict['status'] = 'invalid'
-    logger.error(f"{prefixed_our_name} ignored invalid callback payload; responding with {response_dict}")
+    logger.error(f"{prefixed_our_name} ignored invalid callback payload; responding with {response_dict}\n")
     return jsonify(response_dict), 400
 # end of callback_receiver()
 
