@@ -22,7 +22,7 @@ def check_posted_payload(request, logger):
     # Check for a test ping from Nagios
     if 'User-Agent' in request.headers and 'nagios-plugins' in request.headers['User-Agent'] \
     and 'X-Gogs-Event' in request.headers and request.headers['X-Gogs-Event'] == 'push':
-        return False, {'error': "This appears to be a Nagios ping for testing."}
+        return False, {'error': "This appears to be a Nagios ping for service availability testing."}
 
     # Bail if this is not from DCS
     if 'X-Gitea-Event' not in request.headers:
