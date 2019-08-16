@@ -41,7 +41,7 @@ def check_posted_payload(request, logger):
     #     logger.debug(f"  {payload_key}: {payload_entry!r}")
 
     # Bail if this is not a push or release event
-    #   Others include 'create'
+    #   Others include 'create', 'issue_comment'
     if event_type not in ('push','release'):
         logger.error(f"X-Gitea-Event '{event_type}' is not a push or release")
         logger.info(f"Payload for {event_type} is {payload_json}") # Shows in prodn logs
