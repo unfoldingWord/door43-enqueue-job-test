@@ -216,10 +216,13 @@ def job_receiver():
 
         # See if we want to echo this job to the dev- queue (used for dev- code testing)
         other_queue = Queue(our_other_adjusted_name, connection=redis_connection)
-        if echo_prodn_to_dev_flag:
-            logger.info(f"ALSO ECHOING JOB to {our_other_adjusted_name} queue…")
-            response_dict['echoed_from_production'] = True
-            other_queue.enqueue('webhook.job', response_dict, job_timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
+        if echo_prodn_to_dev_flag: # Should only be set on production chain (so repo_name should be set)
+            if repo_name == 'acceptance_test/test':
+                logger.info(f"Not echoing '{repo_name}' to {our_other_adjusted_name} queue.")
+            else: # for all others
+                logger.info(f"ALSO ECHOING JOB to {our_other_adjusted_name} queue…")
+                response_dict['echoed_from_production'] = True
+                other_queue.enqueue('webhook.job', response_dict, job_timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
 
         # Find out who our workers are
         #workers = Worker.all(connection=redis_connection) # Returns the actual worker objects
