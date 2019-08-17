@@ -22,7 +22,7 @@ def check_posted_payload(request, logger):
     # Check for a test ping from Nagios
     if 'User-Agent' in request.headers and 'nagios-plugins' in request.headers['User-Agent'] \
     and 'X-Gogs-Event' in request.headers and request.headers['X-Gogs-Event'] == 'push':
-        return False, {'error': "This appears to be a Nagios ping for testing."}
+        return False, {'error': "This appears to be a Nagios ping for service availability testing."}
 
     # Bail if this is not from DCS
     if 'X-Gitea-Event' not in request.headers:
@@ -41,7 +41,7 @@ def check_posted_payload(request, logger):
     #     logger.debug(f"  {payload_key}: {payload_entry!r}")
 
     # Bail if this is not a push or release event
-    #   Others include 'create'
+    #   Others include 'create', 'issue_comment'
     if event_type not in ('push','release'):
         logger.error(f"X-Gitea-Event '{event_type}' is not a push or release")
         logger.info(f"Payload for {event_type} is {payload_json}") # Shows in prodn logs
