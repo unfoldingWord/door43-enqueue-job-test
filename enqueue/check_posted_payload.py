@@ -2,6 +2,11 @@
 #   Updated Sept 2018 to add callback check
 
 GITEA_URL = 'https://git.door43.org'
+UNWANTED_REPO_OWNER_USERNAMES = (  # code repos, not "content", so don't convert
+                                'translationCoreApps',
+                                'unfoldingWord-box3',
+                                'unfoldingWord-dev',
+                                )
 
 
 def check_posted_payload(request, logger):
@@ -41,7 +46,7 @@ def check_posted_payload(request, logger):
     #     logger.debug(f"  {payload_key}: {payload_entry!r}")
 
     # Bail if this is not a push or release event
-    #   Others include 'create', 'issue_comment'
+    #   Others include 'create', 'issue_comment', 'issues', 'pull_request', 'fork'
     if event_type not in ('push','release'):
         logger.error(f"X-Gitea-Event '{event_type}' is not a push or release")
         logger.info(f"Payload for {event_type} is {payload_json}") # Shows in prodn logs
@@ -61,6 +66,16 @@ def check_posted_payload(request, logger):
         sender_username = payload_json['sender']['username']
     except (KeyError, AttributeError):
         sender_username = None
+
+    # Don't process known code repos (cf. content)
+    try:
+        repo_owner_username = payload_json['repository']['owner']['username']
+    except (KeyError, AttributeError):
+        repo_owner_username = None
+    for unwanted_repo_username in UNWANTED_REPO_OWNER_USERNAMES:
+        if unwanted_repo_username == repo_owner_username:
+            logger.info(f"Ignoring black-listed \"non-content\" '{unwanted_repo_username}' repo.") # Shows in prodn logs
+            return False, {'error': 'This appears to be a "non-content" (program code?) repo.'}
 
     commit_messages = []
     try:
