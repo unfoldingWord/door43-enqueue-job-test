@@ -74,7 +74,7 @@ def check_posted_payload(request, logger):
         repo_owner_username = None
     for unwanted_repo_username in UNWANTED_REPO_OWNER_USERNAMES:
         if unwanted_repo_username == repo_owner_username:
-            logger.info(f"Ignoring black-listed \"non-content\" '{unwanted_repo_username}' repo.") # Shows in prodn logs
+            logger.info(f"Ignoring black-listed \"non-content\" '{unwanted_repo_username}' repo: {repo_name}") # Shows in prodn logs
             return False, {'error': 'This appears to be a "non-content" (program code?) repo.'}
 
     commit_messages = []
