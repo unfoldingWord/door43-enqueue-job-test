@@ -35,8 +35,8 @@ Requires:
     Python 3.6 (or later)
 
 To setup:
-    python3 -m venv venv
-    source venv/bin/activate
+    python3 -m venv myVenv
+    source myVenv/bin/activate
     make dependencies
 
 Set environment variables:
