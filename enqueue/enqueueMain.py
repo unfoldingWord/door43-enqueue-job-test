@@ -221,6 +221,7 @@ def job_receiver():
                 logger.info(f"Not echoing '{repo_name}' to {our_other_adjusted_name} queue.")
             else: # for all others
                 logger.info(f"ALSO ECHOING JOB to {our_other_adjusted_name} queue…")
+                logger.info("  (Use https://git.door43.org/tx-manager-test-data/echo_prodn_to_dev_off/settings/hooks/44079 to turn this off.)")
                 response_dict['echoed_from_production'] = True
                 other_queue.enqueue('webhook.job', response_dict, job_timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
 
