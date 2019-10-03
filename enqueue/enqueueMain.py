@@ -250,7 +250,7 @@ def job_receiver():
     #else:
     stats_client.incr('webhook.posts.invalid')
     response_dict['status'] = 'invalid'
-    logger.error(f"{prefixed_our_name} ignored invalid payload; responding with {response_dict}\n")
+    logger.error(f"{prefixed_our_name} ignored invalid '{request.headers['X-Gitea-Event']}' payload; responding with {response_dict}\n")
     return jsonify(response_dict), 400
 # end of job_receiver()
 
