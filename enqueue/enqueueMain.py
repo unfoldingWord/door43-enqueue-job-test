@@ -96,7 +96,7 @@ else: # production code
 
 
 prefix_string = f" ({prefix})" if prefix else ""
-logger.info(f"enqueueMain.py {prefix_string}{test_string} running on Python v{sys.version}")
+logger.info(f"enqueueMain.py{prefix_string}{test_string} running on Python v{sys.version}")
 
 
 # Connect to Redis now so it fails at import time if no Redis instance available
