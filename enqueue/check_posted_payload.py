@@ -45,13 +45,13 @@ def check_posted_payload(request, logger):
     # for payload_key, payload_entry in payload_json.items():
     #     logger.debug(f"  {payload_key}: {payload_entry!r}")
 
-    # Bail if this is not a push or release event
+    # Bail if this is not a push, release (tag), or delete (branch) event
     #   Others include 'create', 'issue_comment', 'issues', 'pull_request', 'fork'
-    if event_type not in ('push','release'):
-        logger.error(f"X-Gitea-Event '{event_type}' is not a push or release")
+    if event_type not in ('push', 'release', 'create', 'delete'):
+        logger.error(f"X-Gitea-Event '{event_type}' is not a push, release (tag), or create/delete (branch)")
         logger.info(f"Payload for {event_type} is {payload_json}") # Shows in prodn logs
-        return False, {'error': 'This does not appear to be a push or release.'}
-    our_event_name = {'push':'pushed', 'release':'released'}[event_type]
+        return False, {'error': "This does not appear to be a push, release, or create/delete."}
+    our_event_name = {'push':'pushed', 'release':'released', 'create':'created', 'delete':'deleted'}[event_type]
 
     # Give a brief but helpful info message for the logs
     try:
