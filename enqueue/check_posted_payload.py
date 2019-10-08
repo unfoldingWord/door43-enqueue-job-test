@@ -47,11 +47,11 @@ def check_posted_payload(request, logger):
 
     # Bail if this is not a push, release (tag), or delete (branch) event
     #   Others include 'create', 'issue_comment', 'issues', 'pull_request', 'fork'
-    if event_type not in ('push', 'release', 'create', 'delete'):
-        logger.error(f"X-Gitea-Event '{event_type}' is not a push, release (tag), or create/delete (branch)")
+    if event_type not in ('push', 'release', 'delete'):
+        logger.error(f"X-Gitea-Event '{event_type}' is not a push, release (tag), or delete (branch)")
         logger.info(f"Payload for {event_type} is {payload_json}") # Shows in prodn logs
-        return False, {'error': "This does not appear to be a push, release, or create/delete."}
-    our_event_name = {'push':'pushed', 'release':'released', 'create':'created', 'delete':'deleted'}[event_type]
+        return False, {'error': "This does not appear to be a push, release, or delete."}
+    our_event_name = {'push':'pushed', 'release':'released', 'delete':'deleted'}[event_type]
 
     # Give a brief but helpful info message for the logs
     try:
@@ -142,7 +142,7 @@ def check_posted_payload(request, logger):
         try:
             if not payload_json['commits']:
                 logger.error("No commits found")
-                try:
+                try: # Just display BEFORE & AFTER for interest if they exist
                     logger.debug(f"BEFORE is {payload_json['before']}")
                     logger.debug(f"AFTER  is {payload_json['after']}")
                 except KeyError:
