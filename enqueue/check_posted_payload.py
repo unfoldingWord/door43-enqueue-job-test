@@ -51,7 +51,7 @@ def check_posted_payload(request, logger):
         logger.error(f"X-Gitea-Event '{event_type}' is not a push, release (tag), or delete (branch)")
         logger.info(f"Payload for {event_type} is {payload_json}") # Shows in prodn logs
         return False, {'error': "This does not appear to be a push, release, or delete."}
-    our_event_name = {'push':'pushed', 'release':'released', 'delete':'deleted'}[event_type]
+    our_event_verb = {'push':'pushed', 'release':'released', 'delete':'deleted'}[event_type]
 
     # Give a brief but helpful info message for the logs
     try:
@@ -93,11 +93,11 @@ def check_posted_payload(request, logger):
     except (KeyError, AttributeError):
         extra_info = ""
     if pusher_username:
-        logger.info(f"{pusher_username} {our_event_name} '{repo_name}'{extra_info}")
+        logger.info(f"'{pusher_username}' {our_event_verb} '{repo_name}'{extra_info}")
     elif sender_username:
-        logger.info(f"{sender_username} {our_event_name} '{repo_name}'{extra_info}")
+        logger.info(f"'{sender_username}' {our_event_verb} '{repo_name}'{extra_info}")
     elif repo_name:
-        logger.info(f"UNKNOWN {our_event_name} '{repo_name}'{extra_info}")
+        logger.info(f"UNKNOWN {our_event_verb} '{repo_name}'{extra_info}")
     else: # they were all None
         logger.info(f"No pusher/sender/repo name in payload: {payload_json}")
 
