@@ -111,6 +111,11 @@ To run the container in production use with the desired values:
 Running containers can be viewed with (or append --all to see all containers):
     docker ps
 
+You can connect to a shell inside the container with commands like:
+	# Gives a shell on the running container -- Note: no bash shell available
+	docker exec -it `docker inspect --format="{{.Id}}" tx_enqueue_job` sh
+	docker exec -it `docker inspect --format="{{.Id}}" dev-tx_enqueue_job` sh
+
 The container can be stopped with a command like:
     docker stop dev-door43_enqueue_job
 or using the full container name:
