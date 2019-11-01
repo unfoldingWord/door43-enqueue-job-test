@@ -161,7 +161,7 @@ def job_receiver():
     """
     #assert request.method == 'POST'
     stats_client.incr('webhook.posts.attempted')
-    logger.info(f"{prefixed_our_name} received webhook: {request}")
+    logger.info(f"\nWEBHOOK received by {prefixed_our_name}: {request}")
 
     our_queue = Queue(our_adjusted_name, connection=redis_connection)
 
@@ -265,7 +265,7 @@ def callback_receiver():
     """
     #assert request.method == 'POST'
     stats_client.incr('callback.posts.attempted')
-    logger.info(f"{prefixed_our_name} received callback: {request}")
+    logger.info(f"\nCALLBACK received by {prefixed_our_name}: {request}")
 
     # Collect (and log) some helpful information
     our_queue = Queue(our_adjusted_callback_name, connection=redis_connection)

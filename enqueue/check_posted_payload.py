@@ -38,7 +38,7 @@ def check_posted_payload(request, logger):
 
     # Get the json payload and check it
     payload_json = request.get_json()
-    logger.debug(f"Webhook payload is {payload_json}")
+    logger.debug(f"Webhook payload is {payload_json}") # Only shows in dev- logs
     # Typical keys are: secret, ref, before, after, compare_url,
     #                               commits, (head_commit), repository, pusher, sender
     # logger.debug("Webhook payload:")
@@ -49,7 +49,7 @@ def check_posted_payload(request, logger):
     #   Others include 'create', 'issue_comment', 'issues', 'pull_request', 'fork'
     if event_type not in ('push', 'release', 'delete'):
         logger.error(f"X-Gitea-Event '{event_type}' is not a push, release (tag), or delete (branch)")
-        logger.info(f"Payload for {event_type} is {payload_json}") # Shows in prodn logs
+        logger.info(f"Ignoring '{event_type}' payload: {payload_json}") # Also shows in prodn logs
         return False, {'error': "This does not appear to be a push, release, or delete."}
     our_event_verb = {'push':'pushed', 'release':'released', 'delete':'deleted'}[event_type]
 
