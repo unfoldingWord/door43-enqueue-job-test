@@ -23,11 +23,13 @@ install:
   - pip3 install --upgrade pip
   - pip3 install --requirement enqueue/requirements.txt
   - pip3 install coveralls
+  - pip3 install mypy
 
 # Run the tests first
 #  and if they succeed, make the docker image(s)
 #   (and check that both succeed)
 script:
+  - mypy enqueue/
   - PYTHONPATH="enqueue/" coverage run -m unittest discover -s tests/
 
 # Only execute the following instructions in the case of a success
