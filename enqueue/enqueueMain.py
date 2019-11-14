@@ -44,7 +44,7 @@ echo_prodn_to_dev_flag = False
 JOB_TIMEOUT = '480s' if prefix else '240s' # Then a running job (taken out of the queue) will be considered to have failed
     # NOTE: This is only the time until webhook.py returns after preprocessing and submitting the job
     #           -- the actual conversion jobs might still be running.
-CALLBACK_TIMEOUT = '1200s' if prefix else '1200s' # Then a running callback job (taken out of the queue) will be considered to have failed
+CALLBACK_TIMEOUT = '1200s' if prefix else '600s' # Then a running callback job (taken out of the queue) will be considered to have failed
     # RJH: 480s fails on UGL upload for my slow internet (600s fails even on mini UGL upload!!!)
 
 # Get the redis URL from the environment, otherwise use a local test instance
