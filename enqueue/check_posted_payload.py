@@ -1,15 +1,18 @@
 # This code adapted by RJH June 2018 from tx-manager/client_webhook/ClientWebhookHandler
 #   Updated Sept 2018 to add callback check
 
+from typing import Dict, Tuple, List, Any, Optional
+
+
 GITEA_URL = 'https://git.door43.org'
-UNWANTED_REPO_OWNER_USERNAMES = (  # code repos, not "content", so don't convert
+UNWANTED_REPO_OWNER_USERNAMES = (  # code repos, not "content", so don't convert -- blacklisted
                                 'translationCoreApps',
                                 'unfoldingWord-box3',
                                 'unfoldingWord-dev',
                                 )
 
 
-def check_posted_payload(request, logger):
+def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
     """
     Accepts webhook notification from DCS.
         Parameter is a rq request object
@@ -38,7 +41,7 @@ def check_posted_payload(request, logger):
 
     # Get the json payload and check it
     payload_json = request.get_json()
-    logger.debug(f"Webhook payload is {payload_json}")
+    logger.debug(f"Webhook payload is {payload_json}") # Only shows in dev- logs
     # Typical keys are: secret, ref, before, after, compare_url,
     #                               commits, (head_commit), repository, pusher, sender
     # logger.debug("Webhook payload:")
@@ -49,7 +52,7 @@ def check_posted_payload(request, logger):
     #   Others include 'create', 'issue_comment', 'issues', 'pull_request', 'fork'
     if event_type not in ('push', 'release', 'delete'):
         logger.error(f"X-Gitea-Event '{event_type}' is not a push, release (tag), or delete (branch)")
-        logger.info(f"Payload for {event_type} is {payload_json}") # Shows in prodn logs
+        logger.info(f"Ignoring '{event_type}' payload: {payload_json}") # Also shows in prodn logs
         return False, {'error': "This does not appear to be a push, release, or delete."}
     our_event_verb = {'push':'pushed', 'release':'released', 'delete':'deleted'}[event_type]
 
@@ -77,7 +80,8 @@ def check_posted_payload(request, logger):
             logger.info(f"Ignoring black-listed \"non-content\" '{unwanted_repo_username}' repo: {repo_name}") # Shows in prodn logs
             return False, {'error': 'This appears to be a "non-content" (program code?) repo.'}
 
-    commit_messages = []
+    commit_messages:List[str] = []
+    commit_message:Optional[str]
     try:
         # Assemble a string of commit messages
         for commit_dict in payload_json['commits']:
@@ -113,29 +117,6 @@ def check_posted_payload(request, logger):
 
 
     if event_type == 'push':
-        # # Bail if the commit branch is not the default branch
-        # try:
-        #     commit_branch = payload_json['ref'].split('/')[2]
-        # except (IndexError, AttributeError):
-        #     logger.error(f"Could not determine commit branch from '{payload_json['ref']}'")
-        #     return False, {'error': 'Could not determine commit branch.'}
-        # except KeyError:
-        #     logger.error("No commit branch specified")
-        #     return False, {'error': "No commit branch specified."}
-        # try:
-        #     default_branch = payload_json['repository']['default_branch']
-        #     if commit_branch != default_branch:
-        #         err_msg = f"Commit branch: '{commit_branch}' is not the default branch ({default_branch})"
-        #         # Suppress this particular case
-        #         if commit_branch=='TESTING' and not repo_name and not pusher_username:
-        #             return False, {'error': "This appears to be a ping for testing."}
-        #         else:
-        #             logger.error(err_msg)
-        #             return False, {'error': f"{err_msg}."}
-        # except KeyError:
-        #     logger.error("No default branch specified")
-        #     return False, {'error': "No default branch specified."}
-
         # Bail if this is not an actual commit
         # NOTE: What are these notifications??? 'before' and 'after' have the same commit id
         #   Even test/fake deliveries usually have a commit specified (even if after==before)
@@ -162,7 +143,7 @@ def check_posted_payload(request, logger):
 
 
 
-def check_posted_callback_payload(request, logger):
+def check_posted_callback_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
     """
     Accepts callback notification from tX-Job-Handler.
         Parameter is a rq request object
