@@ -1,7 +1,7 @@
 # This code adapted by RJH June 2018 from tx-manager/client_webhook/ClientWebhookHandler
 #   Updated Sept 2018 to add callback check
 
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, List, Any, Optional
 
 
 GITEA_URL = 'https://git.door43.org'
@@ -80,7 +80,8 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
             logger.info(f"Ignoring black-listed \"non-content\" '{unwanted_repo_username}' repo: {repo_name}") # Shows in prodn logs
             return False, {'error': 'This appears to be a "non-content" (program code?) repo.'}
 
-    commit_messages = []
+    commit_messages:List[str] = []
+    commit_message:Optional[str]
     try:
         # Assemble a string of commit messages
         for commit_dict in payload_json['commits']:
