@@ -41,9 +41,11 @@ echo_prodn_to_dev_flag = False
 
 
 # NOTE: Large lexicons like UGL and UAHL seem to be the longest-running jobs
-JOB_TIMEOUT = '480s' if prefix else '240s' # Then a running job (taken out of the queue) will be considered to have failed
+JOB_TIMEOUT = '800s' if prefix else '500s' # Then a running job (taken out of the queue) will be considered to have failed
     # NOTE: This is only the time until webhook.py returns after preprocessing and submitting the job
     #           -- the actual conversion jobs might still be running.
+    # RJH: 480s fails on UGNT 33,000+ link checks for my slow internet (took 596s)
+    # RJH: 480s fails on UHB 76,000+ link checks for my slow internet (took 361s)
 CALLBACK_TIMEOUT = '1200s' if prefix else '600s' # Then a running callback job (taken out of the queue) will be considered to have failed
     # RJH: 480s fails on UGL upload for my slow internet (600s fails even on mini UGL upload!!!)
 
@@ -122,7 +124,7 @@ app = Flask(__name__)
 logger.info(f"{prefixed_our_name} and callback is up and ready to go…")
 
 
-def handle_failed_queue(our_queue_name):
+def handle_failed_queue(our_queue_name:str) -> int:
     """
     Go through the failed queue, and see how many entries originated from our queue.
 
