@@ -44,8 +44,8 @@ echo_prodn_to_dev_flag = False
 JOB_TIMEOUT = '800s' if prefix else '500s' # Then a running job (taken out of the queue) will be considered to have failed
     # NOTE: This is only the time until webhook.py returns after preprocessing and submitting the job
     #           -- the actual conversion jobs might still be running.
-    # RJH: 480s fails on UGNT 33,000+ link checks for my slow internet (took 596s)
     # RJH: 480s fails on UHB 76,000+ link checks for my slow internet (took 361s)
+    # RJH: 480s fails on UGNT 33,000+ link checks for my slow internet (took 596s)
 CALLBACK_TIMEOUT = '1200s' if prefix else '600s' # Then a running callback job (taken out of the queue) will be considered to have failed
     # RJH: 480s fails on UGL upload for my slow internet (600s fails even on mini UGL upload!!!)
 
@@ -252,7 +252,9 @@ def job_receiver():
     #else:
     stats_client.incr('webhook.posts.invalid')
     response_dict['status'] = 'invalid'
-    logger.error(f"{prefixed_our_name} ignored invalid '{request.headers['X-Gitea-Event']}' payload; responding with {response_dict}\n")
+    try: detail = request.headers['X-Gitea-Event']
+    except KeyError: detail = "No X-Gitea-Event"
+    logger.error(f"{prefixed_our_name} ignored invalid '{detail}' payload; responding with {response_dict}\n")
     return jsonify(response_dict), 400
 # end of job_receiver()
 
