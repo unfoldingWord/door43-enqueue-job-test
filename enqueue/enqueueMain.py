@@ -41,7 +41,7 @@ echo_prodn_to_dev_flag = False
 
 
 # NOTE: Large lexicons like UGL and UAHL seem to be the longest-running jobs
-JOB_TIMEOUT = '800s' if prefix else '500s' # Then a running job (taken out of the queue) will be considered to have failed
+WEBHOOK_TIMEOUT = '900s' if prefix else '600s' # Then a running job (taken out of the queue) will be considered to have failed
     # NOTE: This is only the time until webhook.py returns after preprocessing and submitting the job
     #           -- the actual conversion jobs might still be running.
     # RJH: 480s fails on UHB 76,000+ link checks for my slow internet (took 361s)
@@ -213,7 +213,7 @@ def job_receiver():
         # NOTE: No ttl specified on the next line -- this seems to cause unrun jobs to be just silently dropped
         #           (For now at least, we prefer them to just stay in the queue if they're not getting processed.)
         #       The timeout value determines the max run time of the worker once the job is accessed
-        our_queue.enqueue('webhook.job', response_dict, job_timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
+        our_queue.enqueue('webhook.job', response_dict, job_timeout=WEBHOOK_TIMEOUT) # A function named webhook.job will be called by the worker
         # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
 
         # See if we want to echo this job to the dev- queue (used for dev- code testing)
@@ -225,7 +225,7 @@ def job_receiver():
                 logger.info(f"ALSO ECHOING JOB to {our_other_adjusted_name} queue…")
                 logger.info("  (Use https://git.door43.org/tx-manager-test-data/echo_prodn_to_dev_off/settings/hooks/44079 to turn this off.)")
                 response_dict['echoed_from_production'] = True
-                other_queue.enqueue('webhook.job', response_dict, job_timeout=JOB_TIMEOUT) # A function named webhook.job will be called by the worker
+                other_queue.enqueue('webhook.job', response_dict, job_timeout=WEBHOOK_TIMEOUT) # A function named webhook.job will be called by the worker
 
         # Find out who our workers are
         #workers = Worker.all(connection=redis_connection) # Returns the actual worker objects
