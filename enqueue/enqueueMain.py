@@ -85,15 +85,15 @@ QUEUE_NAME_SUFFIX = '' # Used to switch to a different queue, e.g., '_1'
 if prefix not in ('', DEV_PREFIX):
     logger.critical(f"Unexpected prefix: '{prefix}' -- expected '' or '{DEV_PREFIX}'")
 if prefix: # don't use production queue
-    our_adjusted_name = prefixed_our_name + QUEUE_NAME_SUFFIX # Will become our main queue name
-    our_adjusted_callback_name = prefixed_our_name + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
-    our_other_adjusted_name = OUR_NAME + QUEUE_NAME_SUFFIX # The other queue name
-    our_other_adjusted_callback_name = OUR_NAME + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
+    our_adjusted_webhook_queue_name = prefixed_our_name + QUEUE_NAME_SUFFIX # Will become our main queue name
+    our_adjusted_callback_queue_name = prefixed_our_name + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
+    our_other_adjusted_queue_name = OUR_NAME + QUEUE_NAME_SUFFIX # The other queue name
+    our_other_adjusted_callback_queue_name = OUR_NAME + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
 else: # production code
-    our_adjusted_name = OUR_NAME + QUEUE_NAME_SUFFIX # Will become our main queue name
-    our_adjusted_callback_name = OUR_NAME + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
-    our_other_adjusted_name = DEV_PREFIX + our_adjusted_name # The other queue name
-    our_other_adjusted_callback_name = DEV_PREFIX + our_adjusted_callback_name
+    our_adjusted_webhook_queue_name = OUR_NAME + QUEUE_NAME_SUFFIX # Will become our main queue name
+    our_adjusted_callback_queue_name = OUR_NAME + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
+    our_other_adjusted_queue_name = DEV_PREFIX + our_adjusted_webhook_queue_name # The other queue name
+    our_other_adjusted_callback_queue_name = DEV_PREFIX + our_adjusted_callback_queue_name
 # NOTE: The prefixed version must also listen at a different port (specified in gunicorn run command)
 
 
@@ -159,25 +159,25 @@ def job_receiver():
     Accepts POST requests and checks the (json) payload
 
     Queues the approved jobs at redis instance at global redis_hostname:6379.
-    Queue name is our_adjusted_name (may have been prefixed).
+    Queue name is our_adjusted_webhook_queue_name (may have been prefixed).
     """
     #assert request.method == 'POST'
     stats_client.incr('webhook.posts.attempted')
     logger.info(f"WEBHOOK received by {prefixed_our_name}: {request}")
 
-    our_queue = Queue(our_adjusted_name, connection=redis_connection)
+    our_queue = Queue(our_adjusted_webhook_queue_name, connection=redis_connection)
 
     # Collect and log some helpful information
     len_our_queue = len(our_queue) # Should normally sit at zero here
     stats_client.gauge('webhook.queue.length.current', len_our_queue)
-    len_our_failed_queue = handle_failed_queue(our_adjusted_name)
+    len_our_failed_queue = handle_failed_queue(our_adjusted_webhook_queue_name)
     stats_client.gauge('webhook.queue.length.failed', len_our_failed_queue)
 
     # Find out how many workers we have
     total_worker_count = Worker.count(connection=redis_connection)
     logger.debug(f"Total rq workers = {total_worker_count}")
     our_queue_worker_count = Worker.count(queue=our_queue)
-    logger.debug(f"Our {our_adjusted_name} queue workers = {our_queue_worker_count}")
+    logger.debug(f"Our {our_adjusted_webhook_queue_name} queue workers = {our_queue_worker_count}")
     stats_client.gauge('webhook.workers.available', our_queue_worker_count)
     if our_queue_worker_count < 1:
         logger.critical(f'{prefixed_our_name} has no job handler workers running!')
@@ -217,12 +217,12 @@ def job_receiver():
         # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
 
         # See if we want to echo this job to the dev- queue (used for dev- code testing)
-        other_queue = Queue(our_other_adjusted_name, connection=redis_connection)
+        other_queue = Queue(our_other_adjusted_queue_name, connection=redis_connection)
         if echo_prodn_to_dev_flag: # Should only be set on production chain (so repo_name should be set)
             if repo_name == 'acceptance_test/test':
-                logger.info(f"Not echoing '{repo_name}' to {our_other_adjusted_name} queue.")
+                logger.info(f"Not echoing '{repo_name}' to {our_other_adjusted_queue_name} queue.")
             else: # for all others
-                logger.info(f"ALSO ECHOING JOB to {our_other_adjusted_name} queue…")
+                logger.info(f"ALSO ECHOING JOB to {our_other_adjusted_queue_name} queue…")
                 logger.info("  (Use https://git.door43.org/tx-manager-test-data/echo_prodn_to_dev_off/settings/hooks/44079 to turn this off.)")
                 response_dict['echoed_from_production'] = True
                 other_queue.enqueue('webhook.job', response_dict, job_timeout=WEBHOOK_TIMEOUT) # A function named webhook.job will be called by the worker
@@ -231,22 +231,22 @@ def job_receiver():
         #workers = Worker.all(connection=redis_connection) # Returns the actual worker objects
         #logger.debug(f"Total rq workers ({len(workers)}): {workers}")
         #our_queue_workers = Worker.all(queue=our_queue)
-        #logger.debug(f"Our {our_adjusted_name} queue workers ({len(our_queue_workers)}): {our_queue_workers}")
+        #logger.debug(f"Our {our_adjusted_webhook_queue_name} queue workers ({len(our_queue_workers)}): {our_queue_workers}")
 
         len_our_queue = len(our_queue) # Update
-        logger.info(f"{prefixed_our_name} queued valid job to {our_adjusted_name} queue " \
+        logger.info(f"{prefixed_our_name} queued valid job to {our_adjusted_webhook_queue_name} queue " \
                     f"({len_our_queue} jobs now " \
                         f"for {Worker.count(queue=our_queue)} workers, " \
-                    f"{len(other_queue)} jobs in {our_other_adjusted_name} queue " \
+                    f"{len(other_queue)} jobs in {our_other_adjusted_queue_name} queue " \
                         f"for {Worker.count(queue=other_queue)} workers, " \
                     f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}\n")
 
         webhook_return_dict = {'success': True,
                                'status': 'queued',
-                               'queue_name': our_adjusted_name,
+                               'queue_name': our_adjusted_webhook_queue_name,
                                'door43_job_queued_at': datetime.utcnow()}
         if echo_prodn_to_dev_flag:
-            webhook_return_dict['echoed_queue_name'] = our_other_adjusted_name
+            webhook_return_dict['echoed_queue_name'] = our_other_adjusted_queue_name
         stats_client.incr('webhook.posts.succeeded')
         return jsonify(webhook_return_dict)
     #else:
@@ -265,17 +265,17 @@ def callback_receiver():
     Accepts POST requests and checks the (json) payload
 
     Queues the approved jobs at redis instance at global redis_hostname:6379.
-    Queue name is our_adjusted_callback_name (may have been prefixed).
+    Queue name is our_adjusted_callback_queue_name (may have been prefixed).
     """
     #assert request.method == 'POST'
     stats_client.incr('callback.posts.attempted')
     logger.info(f"CALLBACK received by {prefixed_our_name}: {request}")
 
     # Collect (and log) some helpful information
-    our_queue = Queue(our_adjusted_callback_name, connection=redis_connection)
+    our_queue = Queue(our_adjusted_callback_queue_name, connection=redis_connection)
     len_our_queue = len(our_queue) # Should normally sit at zero here
     stats_client.gauge('callback.queue.length.current', len_our_queue)
-    len_our_failed_queue = handle_failed_queue(our_adjusted_callback_name)
+    len_our_failed_queue = handle_failed_queue(our_adjusted_callback_queue_name)
     stats_client.gauge('callback.queue.length.failed', len_our_failed_queue)
 
     response_ok_flag, response_dict = check_posted_callback_payload(request, logger)
@@ -296,26 +296,26 @@ def callback_receiver():
         #workers = Worker.all(connection=redis_connection) # Returns the actual worker objects
         #logger.debug(f"Total rq workers ({len(workers)}): {workers}")
         #our_queue_workers = Worker.all(queue=our_queue)
-        #logger.debug(f"Our {our_adjusted_callback_name} queue workers ({len(our_queue_workers)}): {our_queue_workers}")
+        #logger.debug(f"Our {our_adjusted_callback_queue_name} queue workers ({len(our_queue_workers)}): {our_queue_workers}")
 
         # Find out how many workers we have
         #worker_count = Worker.count(connection=redis_connection)
         #logger.debug(f"Total rq workers = {worker_count}")
         #our_queue_worker_count = Worker.count(queue=our_queue)
-        #logger.debug(f"Our {our_adjusted_callback_name} queue workers = {our_queue_worker_count}")
+        #logger.debug(f"Our {our_adjusted_callback_queue_name} queue workers = {our_queue_worker_count}")
 
         len_our_queue = len(our_queue) # Update
-        other_callback_queue = Queue(our_other_adjusted_callback_name, connection=redis_connection)
-        logger.info(f"{prefixed_our_name} queued valid callback job to {our_adjusted_callback_name} queue " \
+        other_callback_queue = Queue(our_other_adjusted_callback_queue_name, connection=redis_connection)
+        logger.info(f"{prefixed_our_name} queued valid callback job to {our_adjusted_callback_queue_name} queue " \
                     f"({len_our_queue} jobs now " \
                         f"for {Worker.count(queue=our_queue)} workers, " \
-                    f"{len(other_callback_queue)} jobs in {our_other_adjusted_callback_name} queue " \
+                    f"{len(other_callback_queue)} jobs in {our_other_adjusted_callback_queue_name} queue " \
                         f"for {Worker.count(queue=other_callback_queue)} workers, " \
                     f"{len_our_failed_queue} failed jobs) at {datetime.utcnow()}\n")
 
         callback_return_dict = {'success': True,
                                 'status': 'queued',
-                                'queue_name': our_adjusted_callback_name,
+                                'queue_name': our_adjusted_callback_queue_name,
                                 'door43_callback_queued_at': datetime.utcnow()}
         stats_client.incr('callback.posts.succeeded')
         return jsonify(callback_return_dict)
