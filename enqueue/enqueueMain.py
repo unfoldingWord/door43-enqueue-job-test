@@ -121,7 +121,7 @@ app = Flask(__name__)
 # Not sure that we need this Flask logging
 # app.logger.addHandler(watchtower_log_handler)
 # logging.getLogger('werkzeug').addHandler(watchtower_log_handler)
-logger.info(f"{prefixed_our_name} and callback is up and ready to go…")
+logger.info(f"{prefixed_our_name} and callback is up and ready to go")
 
 
 def handle_failed_queue(our_queue_name:str) -> int:
