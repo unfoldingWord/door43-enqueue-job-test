@@ -1,10 +1,10 @@
 # .travis.yml
 #
-# Requires the following environment variables to be set:
+# Requires the following environment variables to be set in the Travis settings:
 #   DOCKER_USERNAME
 #   DOCKER_PASSWORD
 
-dist: xenial
+dist: bionic
 language: python
 # See available versions at https://docs.travis-ci.com/user/languages/python/
 python:
