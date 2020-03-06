@@ -92,7 +92,8 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
         commit_message = None
 
     try:
-        extra_info = f" with ({len(commit_messages)}) {commit_message}" if event_type=='push' \
+        count_info = 'one commit' if len(commit_messages)==1 else f'{len(commit_messages)} commits'
+        extra_info = f" with {count_info}: {commit_message}" if event_type=='push' \
                     else f" with '{payload_json['release']['name']}'"
     except (KeyError, AttributeError):
         extra_info = ""
