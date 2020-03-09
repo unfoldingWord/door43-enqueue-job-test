@@ -62,7 +62,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "No repo URL specified."
+            'error': "No repo URL specified for push."
         }
         self.assertEqual(output, expected)
 
@@ -78,7 +78,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "The repo does not belong to https://git.door43.org."
+            'error': "The repo for push does not belong to https://git.door43.org."
         }
         self.assertEqual(output, expected)
 
@@ -94,7 +94,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "No commits specified."
+            'error': "No commits specified for push."
         }
         self.assertEqual(output, expected)
 
@@ -111,7 +111,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "No commits specified."
+            'error': "No commits specified for push."
         }
         self.assertEqual(output, expected)
 
@@ -128,7 +128,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "No commits specified."
+            'error': "No commits specified for push."
         }
         self.assertEqual(output, expected)
 
@@ -146,7 +146,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "No commits specified."
+            'error': "No commits specified for push."
         }
         self.assertEqual(output, expected)
 
@@ -164,7 +164,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "No commits specified."
+            'error': "No commits specified for push."
         }
         self.assertEqual(output, expected)
 
@@ -183,7 +183,7 @@ class TestPayloadCheck(TestCase):
         mock_request.data = payload_json
         output = check_posted_payload(mock_request, logging)
         expected = False, {
-            'error': "No commits found."
+            'error': "No commits found for push."
         }
         self.assertEqual(output, expected)
 

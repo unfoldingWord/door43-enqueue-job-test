@@ -61,7 +61,7 @@ from redis import exceptions as redis_exceptions
             #self.assertEqual(response.status_code, 400)
             #self.assertEqual(response.headers['Content-Type'], 'application/json' )
             #response_dict = json.loads(response.data)
-            #expected_dict = {'error': 'No repo URL specified.', 'status':'failed'}
+            #expected_dict = {'error': 'No repo URL specified for push.', 'status':'failed'}
             #self.assertEqual(response_dict, expected_dict)
 
     #def test_webhook_with_minimal_json_payload(self):

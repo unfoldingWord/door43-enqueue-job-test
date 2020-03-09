@@ -77,8 +77,8 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
         repo_owner_username = None
     for unwanted_repo_username in UNWANTED_REPO_OWNER_USERNAMES:
         if unwanted_repo_username == repo_owner_username:
-            logger.info(f"Ignoring black-listed \"non-content\" '{unwanted_repo_username}' repo: {repo_name}") # Shows in prodn logs
-            return False, {'error': 'This appears to be a "non-content" (program code?) repo.'}
+            logger.info(f"Ignoring {event_type} for black-listed \"non-content\" '{unwanted_repo_username}' repo: {repo_name}") # Shows in prodn logs
+            return False, {'error': f'This {event_type} appears to be for a "non-content" (program code?) repo.'}
 
     commit_messages:List[str] = []
     commit_message:Optional[str]
@@ -104,17 +104,17 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
     elif repo_name:
         logger.info(f"UNKNOWN {our_event_verb} '{repo_name}'{extra_info}")
     else: # they were all None
-        logger.info(f"No pusher/sender/repo name in payload: {payload_json}")
+        logger.info(f"No pusher/sender/repo name in {event_type} payload: {payload_json}")
 
 
     # Bail if the URL to the repo is invalid
     try:
         if not payload_json['repository']['html_url'].startswith(GITEA_URL):
-            logger.error(f"The repo at '{payload_json['repository']['html_url']}' does not belong to '{GITEA_URL}'")
-            return False, {'error': f'The repo does not belong to {GITEA_URL}.'}
+            logger.error(f"The repo for {event_type} at '{payload_json['repository']['html_url']}' does not belong to '{GITEA_URL}'")
+            return False, {'error': f'The repo for {event_type} does not belong to {GITEA_URL}.'}
     except KeyError:
         logger.error("No repo URL specified")
-        return False, {'error': 'No repo URL specified.'}
+        return False, {'error': f"No repo URL specified for {event_type}."}
 
 
     if event_type == 'push':
@@ -123,22 +123,32 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
         #   Even test/fake deliveries usually have a commit specified (even if after==before)
         try:
             if not payload_json['commits']:
-                logger.error("No commits found")
+                logger.error("No commits found for push")
                 try: # Just display BEFORE & AFTER for interest if they exist
                     logger.debug(f"BEFORE is {payload_json['before']}")
                     logger.debug(f"AFTER  is {payload_json['after']}")
                 except KeyError:
                     pass
-                return False, {'error': "No commits found."}
+                return False, {'error': "No commits found for push."}
         except KeyError:
-            logger.error("No commits specified")
-            return False, {'error': "No commits specified."}
+            logger.error("No commits specified for push")
+            return False, {'error': "No commits specified for push."}
+
+
+    if 'action' in payload_json:
+        logger.info(f"This {event_type} has ACTION='{payload_json['action']}'")
+    if 'draft' in payload_json and payload_json['draft']:
+        logger.error(f"This appears to be a DRAFT {event_type}")
+        return False, {'error': f"Preview {event_type} pages don't get built for drafts."}
+    if 'target_commitish' in payload_json:
+        logger.error(f"This {event_type} has target_commitish='{payload_json['target_commitish']}'")
+        return False, {'error': f"Preview {event_type} pages don't get built with target_commitish='{payload_json['target_commitish']}'."}
 
 
     # Add the event to the payload to be passed on
     payload_json['DCS_event'] = event_type
 
-    logger.debug("Door43 payload seems ok")
+    logger.debug(f"Door43 payload for {event_type} seems ok")
     return True, payload_json
 # end of check_posted_payload
 
