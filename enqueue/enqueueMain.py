@@ -10,7 +10,7 @@ import sys
 from datetime import datetime, timedelta
 import logging
 
-# Library (PyPi) imports
+# Library (PyPI) imports
 from flask import Flask, request, jsonify
 # NOTE: We use StrictRedis() because we don't need the backwards compatibility of Redis()
 from redis import StrictRedis
