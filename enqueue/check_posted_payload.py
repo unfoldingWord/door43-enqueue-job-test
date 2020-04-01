@@ -137,12 +137,13 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
 
     if 'action' in payload_json:
         logger.info(f"This {event_type} has ACTION='{payload_json['action']}'")
-    if 'draft' in payload_json and payload_json['draft']:
-        logger.error(f"This appears to be a DRAFT {event_type}")
-        return False, {'error': f"Preview {event_type} pages don't get built for drafts."}
-    if 'target_commitish' in payload_json:
-        logger.error(f"This {event_type} has target_commitish='{payload_json['target_commitish']}'")
-        return False, {'error': f"Preview {event_type} pages don't get built with target_commitish='{payload_json['target_commitish']}'."}
+    if 'release' in payload_json:
+        if 'draft' in payload_json['release'] and payload_json['release']['draft']:
+            logger.error(f"This release appears to be a DRAFT {event_type}")
+            return False, {'error': f"Preview {event_type} pages don't get built for drafts."}
+        if 'target_commitish' in payload_json['release']:
+            logger.error(f"This {event_type} has release target_commitish='{payload_json['release']['target_commitish']}'")
+            return False, {'error': f"Preview {event_type} pages don't get built with target_commitish='{payload_json['release']['target_commitish']}'."}
 
 
     # Add the event to the payload to be passed on
