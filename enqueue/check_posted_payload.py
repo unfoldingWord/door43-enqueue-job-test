@@ -5,7 +5,7 @@ from typing import Dict, Tuple, List, Any, Optional
 
 
 GITEA_URL = 'https://git.door43.org'
-UNWANTED_REPO_OWNER_USERNAMES = (  # code repos, not "content", so don't convert -- blacklisted
+UNWANTED_REPO_OWNER_USERNAMES = (  # code repos, not "content", so don't convert—blacklisted
                                 'translationCoreApps',
                                 'unfoldingWord-box3',
                                 'unfoldingWord-dev',
@@ -141,9 +141,10 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
         if 'draft' in payload_json['release'] and payload_json['release']['draft']:
             logger.error(f"This release appears to be a DRAFT {event_type}")
             return False, {'error': f"Preview {event_type} pages don't get built for drafts."}
-        if 'target_commitish' in payload_json['release']:
-            logger.error(f"This {event_type} has release target_commitish='{payload_json['release']['target_commitish']}'")
-            return False, {'error': f"Preview {event_type} pages don't get built with target_commitish='{payload_json['release']['target_commitish']}'."}
+        # NOTE: The following seems to prevent real releases from being built !!!
+        # if 'target_commitish' in payload_json['release']:
+        #     logger.error(f"This {event_type} has release target_commitish='{payload_json['release']['target_commitish']}'")
+        #     return False, {'error': f"Preview {event_type} pages don't get built with target_commitish='{payload_json['release']['target_commitish']}'."}
 
 
     # Add the event to the payload to be passed on

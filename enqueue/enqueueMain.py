@@ -83,7 +83,7 @@ logger.debug(f"Logging to AWS CloudWatch group '{log_group_name}' using key '…
 # Setup queue variables
 QUEUE_NAME_SUFFIX = '' # Used to switch to a different queue, e.g., '_1'
 if prefix not in ('', DEV_PREFIX):
-    logger.critical(f"Unexpected prefix: '{prefix}' -- expected '' or '{DEV_PREFIX}'")
+    logger.critical(f"Unexpected prefix: '{prefix}' — expected '' or '{DEV_PREFIX}'")
 if prefix: # don't use production queue
     our_adjusted_webhook_queue_name = prefixed_our_name + QUEUE_NAME_SUFFIX # Will become our main queue name
     our_adjusted_callback_queue_name = prefixed_our_name + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
