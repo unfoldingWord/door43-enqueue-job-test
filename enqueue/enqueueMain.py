@@ -164,6 +164,7 @@ def job_receiver():
     #assert request.method == 'POST'
     stats_client.incr('webhook.posts.attempted')
     logger.info(f"WEBHOOK received by {prefixed_our_name}: {request}")
+    # NOTE: 'request' above typically displays something like "<Request 'http://git.door43.org/' [POST]>"
 
     our_queue = Queue(our_adjusted_webhook_queue_name, connection=redis_connection)
 
