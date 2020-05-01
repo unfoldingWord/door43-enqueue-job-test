@@ -41,7 +41,7 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
 
     # Get the json payload and check it
     payload_json = request.get_json()
-    logger.debug(f"Webhook payload is {payload_json}") # Only shows in dev- logs
+    logger.info(f"Webhook payload is {payload_json}")
     # Typical keys are: secret, ref, before, after, compare_url,
     #                               commits, (head_commit), repository, pusher, sender
     # logger.debug("Webhook payload:")
@@ -173,7 +173,7 @@ def check_posted_callback_payload(request, logger) -> Tuple[bool, Dict[str,Any]]
 
     # Get the json payload and check it
     callback_payload_json = request.get_json()
-    logger.debug(f"Callback payload is {callback_payload_json}")
+    logger.debug(f"Callback payload is {callback_payload_json}") # Doesn't show in main logs
 
     if 'job_id' not in callback_payload_json or not callback_payload_json['job_id']:
         logger.error("No callback job_id specified")
