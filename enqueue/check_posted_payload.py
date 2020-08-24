@@ -50,11 +50,12 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
 
     # Bail if this is not a push, release (tag), or delete (branch) event
     #   Others include 'create', 'issue_comment', 'issues', 'pull_request', 'fork'
-    if event_type not in ('push', 'release', 'delete'):
+    if event_type not in ('push', 'release', 'delete', 'fork'):
         logger.error(f"X-Gitea-Event '{event_type}' is not a push, release (tag), or delete (branch)")
         logger.info(f"Ignoring '{event_type}' payload: {payload_json}") # Also shows in prodn logs
-        return False, {'error': "This does not appear to be a push, release, or delete."}
-    our_event_verb = {'push':'pushed', 'release':'released', 'delete':'deleted'}[event_type]
+        return False, {'error': "This does not appear to be a push, release, fork, or delete."}
+    our_event_verb = {'push':'pushed', 'release':'released',
+                        'delete':'deleted', 'fork':'forked'}[event_type]
 
     # Give a brief but helpful info message for the logs
     try:
