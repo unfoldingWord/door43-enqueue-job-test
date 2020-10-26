@@ -81,6 +81,17 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
             logger.info(f"Ignoring {event_type} for black-listed \"non-content\" '{unwanted_repo_username}' repo: {repo_name}") # Shows in prodn logs
             return False, {'error': f'This {event_type} appears to be for a "non-content" (program code?) repo.'}
 
+
+    # Bail if the repo is private
+    try:
+        private_flag = payload_json['repository']['private']
+    except (KeyError, AttributeError):
+        private_flag = 'MISSING'
+    if private_flag != False:
+        logger.error(f"The repo for {event_type} is not public: got {private_flag}")
+        return False, {'error': f'The repo for {event_type} is not public.'}
+
+
     commit_messages:List[str] = []
     commit_message:Optional[str]
     try:
