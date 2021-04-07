@@ -4,7 +4,9 @@
 import os
 from typing import Dict, Tuple, List, Any, Optional
 
-GITEA_URL = os.getenv('GITEA_URL', default='https://git.door43.org')
+prefix = os.getenv('QUEUE_PREFIX', '')
+GITEA_URL = os.getenv('GITEA_URL', default='https://develop.door43.org' if prefix else 'https://git.door43.org')
+
 RESTRICT_GITEA_URL = os.getenv('RESTRICT_GITEA_URL', 'True').lower() in ['true', '1']
 UNWANTED_REPO_OWNER_USERNAMES = (  # code repos, not "content", so don't convert—blacklisted
                                 'translationCoreApps',
