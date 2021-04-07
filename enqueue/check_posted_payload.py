@@ -1,10 +1,11 @@
 # This code adapted by RJH June 2018 from tx-manager/client_webhook/ClientWebhookHandler
 #   Updated Sept 2018 to add callback check
 
+import os
 from typing import Dict, Tuple, List, Any, Optional
 
-
-GITEA_URL = 'https://git.door43.org'
+GITEA_URL = os.getenv('GITEA_URL', default='https://git.door43.org')
+RESTRICT_GITEA_URL = os.getenv('RESTRICT_GITEA_URL', 'True').lower() in ['true', '1']
 UNWANTED_REPO_OWNER_USERNAMES = (  # code repos, not "content", so don't convert—blacklisted
                                 'translationCoreApps',
                                 'unfoldingWord-box3',
@@ -110,7 +111,7 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
 
     # Bail if the URL to the repo is invalid
     try:
-        if not payload_json['repository']['html_url'].startswith(GITEA_URL):
+        if RESTRICT_GITEA_URL and not payload_json['repository']['html_url'].startswith(GITEA_URL):
             logger.error(f"The repo for {event_type} at '{payload_json['repository']['html_url']}' does not belong to '{GITEA_URL}'")
             return False, {'error': f'The repo for {event_type} does not belong to {GITEA_URL}.'}
     except KeyError:
