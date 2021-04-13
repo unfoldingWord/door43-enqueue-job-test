@@ -123,10 +123,12 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
 
     if event_type == 'push':
         # Bail if this is not an actual commit
-        # NOTE: What are these notifications??? 'before' and 'after' have the same commit id
+        # NOTE: What are these notifications??? 'before' and 'after' have the same commit id 
         #   Even test/fake deliveries usually have a commit specified (even if after==before)
+        #   RESPONSE: This is not always true! A new branch creates a push that has no before commit ID (just 0000000000000000000000000000000000000000)
+        #             Going to allow a build if before/after do not match - RHM
         try:
-            if not payload_json['commits']:
+            if not payload_json['commits'] and payload_json['before'] == payload_json['after']:
                 logger.error("No commits found for push")
                 try: # Just display BEFORE & AFTER for interest if they exist
                     logger.debug(f"BEFORE is {payload_json['before']}")
