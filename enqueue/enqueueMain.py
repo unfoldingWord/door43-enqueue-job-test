@@ -64,7 +64,7 @@ logger.addHandler(sh)
 aws_access_key_id = environ['AWS_ACCESS_KEY_ID']
 boto3_session = Session(aws_access_key_id=aws_access_key_id,
                         aws_secret_access_key=environ['AWS_SECRET_ACCESS_KEY'],
-                        region_name='us-west-2')
+                        region_name='us-west-2', endpoint_url=environ['AWS_ENDPOINT_URL'])
 test_mode_flag = getenv('TEST_MODE', '')
 travis_flag = getenv('TRAVIS_BRANCH', '')
 log_group_name = f"{'' if test_mode_flag or travis_flag else prefix}tX" \
