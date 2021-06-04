@@ -39,7 +39,6 @@ prefix = getenv('QUEUE_PREFIX', '') # Gets (optional) QUEUE_PREFIX environment v
 prefixed_our_name = prefix + OUR_NAME
 echo_prodn_to_dev_flag = False
 
-
 # NOTE: Large lexicons like UGL and UAHL seem to be the longest-running jobs
 WEBHOOK_TIMEOUT = '900s' if prefix else '600s' # Then a running job (taken out of the queue) will be considered to have failed
     # NOTE: This is only the time until webhook.py returns after preprocessing and submitting the job
@@ -62,9 +61,10 @@ sh = logging.StreamHandler(sys.stdout)
 sh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s: %(message)s'))
 logger.addHandler(sh)
 aws_access_key_id = environ['AWS_ACCESS_KEY_ID']
+aws_endpoint_url = getenv('AWS_ENDPOINT_URL', None)
 boto3_session = Session(aws_access_key_id=aws_access_key_id,
                         aws_secret_access_key=environ['AWS_SECRET_ACCESS_KEY'],
-                        region_name='us-west-2', endpoint_url=environ['AWS_ENDPOINT_URL'])
+                        region_name='us-west-2')
 test_mode_flag = getenv('TEST_MODE', '')
 travis_flag = getenv('TRAVIS_BRANCH', '')
 log_group_name = f"{'' if test_mode_flag or travis_flag else prefix}tX" \
@@ -73,7 +73,8 @@ log_group_name = f"{'' if test_mode_flag or travis_flag else prefix}tX" \
                  f"{'_TravisCI' if travis_flag else ''}"
 watchtower_log_handler = CloudWatchLogHandler(boto3_session=boto3_session,
                                               log_group=log_group_name,
-                                              stream_name=prefixed_our_name)
+                                              stream_name=prefixed_our_name,
+                                              endpoint_url=aws_endpoint_url)
 logger.addHandler(watchtower_log_handler)
 # Enable DEBUG logging for dev- instances (but less logging for production)
 logger.setLevel(logging.DEBUG if prefix else logging.INFO)
