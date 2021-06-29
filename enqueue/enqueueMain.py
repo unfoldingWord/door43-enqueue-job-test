@@ -24,9 +24,9 @@ from watchtower import CloudWatchLogHandler
 from check_posted_payload import check_posted_payload, check_posted_callback_payload
 
 
-OUR_NAME = "Door43_Enqueue"
-DJH_NAME = 'door43_job_handler' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
-DCJH_NAME = 'door43_catalog_job-handler'
+OUR_NAME = 'Door43_Enqueue' # Used for logging
+DJH_NAME = 'Door43_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
+DCJH_NAME = 'Door43_catalog_webhook'
 CALLBACK_SUFFIX = '_callback'
 DEV_PREFIX = 'dev-'
 
