@@ -8,6 +8,7 @@ prefix = os.getenv('QUEUE_PREFIX', '')
 GITEA_URL = os.getenv('GITEA_URL', default='https://develop.door43.org' if prefix else 'https://git.door43.org')
 
 RESTRICT_GITEA_URL = os.getenv('RESTRICT_GITEA_URL', 'True').lower() in ['true', '1']
+GITEA_URL = os.getenv('GITEA_URL', 'https://git.door43.org')
 UNWANTED_REPO_OWNER_USERNAMES = (  # code repos, not "content", so don't convert—blacklisted
                                 'translationCoreApps',
                                 'unfoldingWord-box3',
@@ -83,6 +84,17 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
         if unwanted_repo_username == repo_owner_username:
             logger.info(f"Ignoring {event_type} for black-listed \"non-content\" '{unwanted_repo_username}' repo: {repo_name}") # Shows in prodn logs
             return False, {'error': f'This {event_type} appears to be for a "non-content" (program code?) repo.'}
+
+
+    # Bail if the repo is private
+    try:
+        private_flag = payload_json['repository']['private']
+    except (KeyError, AttributeError):
+        private_flag = 'MISSING'
+    if private_flag != False:
+        logger.error(f"The repo for {event_type} is not public: got {private_flag}")
+        return False, {'error': f'The repo for {event_type} is not public.'}
+
 
     commit_messages:List[str] = []
     commit_message:Optional[str]
