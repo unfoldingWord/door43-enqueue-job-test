@@ -182,7 +182,7 @@ def job_receiver():
     stats_client.gauge('webhook.queue.length.failed', len_djh_failed_queue)
     len_dcjh_queue = len(dcjh_queue) # Should normally sit at zero here
     stats_client.gauge('webhook.queue.length.current', len_dcjh_queue)
-    len_dcjh_failed_queue = handle_failed_queue(dcjh_adjusted_webhook_queue_name)
+    len_dcjh_failed_queue = handle_failed_queue(dcjh_adjusted_queue_name)
     stats_client.gauge('webhook.queue.length.failed', len_dcjh_failed_queue)
 
     # Find out how many workers we have
