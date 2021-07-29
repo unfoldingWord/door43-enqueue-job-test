@@ -1,0 +1,45 @@
+name: Publish to Docker Hub
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+    tags:
+      - v*
+    release:
+      types: [published]
+
+jobs:
+  publish-to-docker:
+    name: Publish to Docker Hub
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - name: SET DOCKER_TAGS from GITHUB_REF (will be branch or tag of push event)
+        shell: bash
+        run: |
+          REF=`echo ${GITHUB_REF} | cut -d "/" -f3-`
+          echo "REF=${REF}"
+          # Be default, we use the branch or tag name as the Docker tag
+          DOCKER_TAGS="${REF//\//-}"
+          if [[ "${REF}" == "v"* ]]; then
+            # REF is a tag so we create tags for patch, minor and major versions and is the latest production
+            PATCH_VERSION=${REF#v}
+            PATCH_VERSION=${PATCH_VERSION%-dcs}
+            MINOR_VERSION=`echo ${PATCH_VERSION} | cut -f1,2 -d'.'`
+            MAJOR_VERSION=`echo ${MINOR_VERSION} | cut -f1 -d'.'`
+            DOCKER_TAGS="${DOCKER_TAGS},latest,${MAJOR_VERSION},${MINOR_VERSION},${PATCH_VERSION}"
+          fi
+          echo "SETTING DOCKER_TAGS: ${DOCKER_TAGS}"
+          echo "DOCKER_TAGS=${DOCKER_TAGS}" >> $GITHUB_ENV
+
+      - name: Publish Docker Github Action
+        uses: elgohr/Publish-Docker-Github-Action@master
+        with:
+          name: unfoldingword/door43-enqueue-job
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          dockerfile: Dockerfile
+          tags: ${{ env.DOCKER_TAGS }}
