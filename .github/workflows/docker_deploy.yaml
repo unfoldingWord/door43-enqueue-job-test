@@ -50,5 +50,6 @@ jobs:
           name: unfoldingword/door43_enqueue_job
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          dockerfile: enqueue/${{ env.DOCKER_FILE }}
+          path: enqueue
+          dockerfile: ${{ env.DOCKER_FILE }}
           tags: ${{ env.DOCKER_TAGS }}
