@@ -40,8 +40,9 @@ jobs:
           fi
           echo "SETTING DOCKER_TAGS: ${DOCKER_TAGS}"
           echo "DOCKER_TAGS=${DOCKER_TAGS}" >> $GITHUB_ENV
-          echo "SETTING DOCKER_FILE: ${DOCKER_TAGS}"
+          echo "SETTING DOCKER_FILE: ${DOCKER_FILE}"
           echo "DOCKER_FILE=${DOCKER_FILE}" >> $GITHUB_ENV
+          ls -R
 
       - name: Publish Docker Github Action
         uses: elgohr/Publish-Docker-Github-Action@master
