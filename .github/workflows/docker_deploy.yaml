@@ -28,10 +28,16 @@ jobs:
           echo "REF=$REF"
           if [[ "$REF" == "v"* ]]; then
             # REF is a tag so we create tags for patch, minor and major versions and is the latest production
-            PATCH_VERSION=${REF#v}
-            PATCH_VERSION=${PATCH_VERSION%-dcs}
-            MINOR_VERSION=`echo ${PATCH_VERSION} | cut -f1,2 -d'.'`
-            MAJOR_VERSION=`echo ${MINOR_VERSION} | cut -f1 -d'.'`
+            PATCH_VERSION=${REF#v} # remove the v for the patch version
+            MINOR_VERSION=`echo ${PATCH_VERSION} | cut -f1,2 -d'.'` # Only the first two parts
+            MAJOR_VERSION=`echo ${MINOR_VERSION} | cut -f1 -d'.'` #Only the first part
+            # If release is v1 or v1.0 we make sure the MINOR and PATCH versions have the necessary .0's
+            if [[ "$MINOR_VERSION" == "$MAJOR_VERSION" ]]; then
+              MINOR_VERSION="${MAJOR_VERSION}.0"
+              PATCH_VERSION="${MINOR_VERSION}.0"
+            elif [[ "$PATCH_VERSION" == "$MINOR_VERSION" ]]; then
+              PATCH_VERSION="${MINOR_VERSION}.0"
+            fi
             DOCKER_TAGS="${REF},latest,${MAJOR_VERSION},${MINOR_VERSION},${PATCH_VERSION}"
             # We want to always use the masterBranch Dockerfile for releases
             DOCKER_FILE=Dockerfile-masterBranch
