@@ -15,7 +15,11 @@ jobs:
     name: Publish to Docker Hub
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          lfs: true
 
       - name: SET DOCKER_TAGS from GITHUB_REF (will be branch or tag of push event)
         shell: bash
