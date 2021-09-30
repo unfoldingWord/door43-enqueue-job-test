@@ -304,6 +304,8 @@ def callback_receiver():
     dcjh_queue = Queue(dcjh_adjusted_queue_name, connection=redis_connection)
     len_dcjh_queue = len(dcjh_queue) # Should normally sit at zero here
     stats_client.gauge('callback.queue.length.current', len_dcjh_queue)
+    len_dcjh_failed_queue = handle_failed_queue(dcjh_adjusted_queue_name)
+    stats_client.gauge('callback.queue.length.failed', len_dcjh_failed_queue)
 
     response_ok_flag, response_dict = check_posted_callback_payload(request, logger)
     # response_dict is json payload if successful, else error info
