@@ -24,10 +24,10 @@ from watchtower import CloudWatchLogHandler
 from check_posted_payload import check_posted_payload, check_posted_callback_payload
 
 
-OUR_NAME = 'Door43_Enqueue' # Used for logging
-DJH_NAME = 'Door43_webhook' # Becomes the (perhaps prefixed) queue name (and graphite name) -- MUST match setup.py in door43-job-handler
-DCJH_NAME = 'Door43_catalog_webhook'
-CALLBACK_SUFFIX = '_callback'
+DOOR43_ENQUEUE = 'Door43_Enqueue' # Used for logging
+DJH_NAME = 'door43_job_handler' # The main queue name for generating HTML, PDF, etc. files (and graphite name) -- MUST match setup.py in door43-job-handler. Will get prefixed for dev
+DCJH_NAME = 'door43_catalog_job_handler' # The catalog backport queue name -- MUST match setup.py in door43-catalog-job-handler. Will get prefixed for dev
+CALLBACK_SUFFIX = '_callback' # The callback prefix for the DJH_NAME to handle deploy files
 DEV_PREFIX = 'dev-'
 
 # NOTE: The following strings if not empty, MUST have a trailing slash but NOT a leading one.
@@ -38,9 +38,9 @@ CALLBACK_URL_SEGMENT = WEBHOOK_URL_SEGMENT + 'tx-callback/'
 
 # Look at relevant environment variables
 prefix = getenv('QUEUE_PREFIX', '') # Gets (optional) QUEUE_PREFIX environment variable -- set to 'dev-' for development
-prefixed_our_name = prefix + OUR_NAME
-prefixed_djh_name = prefix + DJH_NAME
-prefixed_dcjh_name = prefix + DCJH_NAME
+prefixed_door43_enqueue = prefix + DOOR43_ENQUEUE
+prefixed_door43_webhook = prefix + DJH_NAME
+prefixed_door43_catalog = prefix + DCJH_NAME
 echo_prodn_to_dev_flag = False
 
 # NOTE: Large lexicons like UGL and UAHL seem to be the longest-running jobs
@@ -60,7 +60,7 @@ test_string = " (TEST)" if debug_mode_flag else ""
 
 
 # Setup logging
-logger = logging.getLogger(prefixed_our_name)
+logger = logging.getLogger(prefixed_door43_enqueue)
 sh = logging.StreamHandler(sys.stdout)
 sh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s: %(message)s'))
 logger.addHandler(sh)
@@ -76,7 +76,7 @@ log_group_name = f"{'' if test_mode_flag or travis_flag else prefix}tX" \
                  f"{'_TravisCI' if travis_flag else ''}"
 watchtower_log_handler = CloudWatchLogHandler(boto3_session=boto3_session,
                                               log_group=log_group_name,
-                                              stream_name=prefixed_our_name)
+                                              stream_name=prefixed_door43_enqueue)
 logger.addHandler(watchtower_log_handler)
 # Enable DEBUG logging for dev- instances (but less logging for production)
 logger.setLevel(logging.DEBUG if prefix else logging.INFO)
@@ -88,11 +88,11 @@ QUEUE_NAME_SUFFIX = '' # Used to switch to a different queue, e.g., '_1'
 if prefix not in ('', DEV_PREFIX):
     logger.critical(f"Unexpected prefix: '{prefix}' — expected '' or '{DEV_PREFIX}'")
 if prefix: # don't use production queue
-    djh_adjusted_webhook_queue_name = prefixed_djh_name + QUEUE_NAME_SUFFIX # Will become our main queue name
-    djh_adjusted_callback_queue_name = prefixed_djh_name + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
+    djh_adjusted_queue_name = prefixed_door43_webhook + QUEUE_NAME_SUFFIX # Will become our main queue name
+    djh_adjusted_callback_queue_name = prefixed_door43_webhook + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
     djh_other_adjusted_queue_name = DJH_NAME + QUEUE_NAME_SUFFIX # The other queue name
     djh_other_adjusted_callback_queue_name = DJH_NAME + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
-    dcjh_adjusted_queue_name = prefixed_dcjh_name + QUEUE_NAME_SUFFIX # Will become the catalog handler queue name
+    dcjh_adjusted_queue_name = prefixed_door43_catalog + QUEUE_NAME_SUFFIX # Will become the catalog handler queue name
 else: # production code
     djh_adjusted_webhook_queue_name = DJH_NAME + QUEUE_NAME_SUFFIX # Will become our main queue name
     djh_adjusted_callback_queue_name = DJH_NAME + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
@@ -108,7 +108,7 @@ logger.info(f"enqueueMain.py{prefix_string}{test_string} running on Python v{sys
 
 # Connect to Redis now so it fails at import time if no Redis instance available
 logger.info(f"redis_hostname is '{redis_hostname}'")
-logger.debug(f"{prefixed_our_name} connecting to Redis…")
+logger.debug(f"{prefixed_door43_enqueue} connecting to Redis…")
 redis_connection = StrictRedis(host=redis_hostname)
 logger.debug("Getting total worker count in order to verify working Redis connection…")
 total_rq_worker_count = Worker.count(connection=redis_connection)
@@ -126,7 +126,7 @@ app = Flask(__name__)
 # Not sure that we need this Flask logging
 # app.logger.addHandler(watchtower_log_handler)
 # logging.getLogger('werkzeug').addHandler(watchtower_log_handler)
-logger.info(f"{prefixed_djh_name}, callback and {prefixed_dcjh_name} are up and ready to go")
+logger.info(f"{prefixed_door43_webhook}, callback and {prefixed_door43_catalog} are up and ready to go")
 
 
 def handle_failed_queue(queue_name:str) -> int:
@@ -168,7 +168,7 @@ def job_receiver():
     """
     #assert request.method == 'POST'
     stats_client.incr('webhook.posts.attempted')
-    logger.info(f"WEBHOOK received by {prefixed_our_name}: {request}")
+    logger.info(f"WEBHOOK received by {prefixed_door43_enqueue}: {request}")
     # NOTE: 'request' above typically displays something like "<Request 'http://git.door43.org/' [POST]>"
 
     djh_queue = Queue(djh_adjusted_webhook_queue_name, connection=redis_connection)
@@ -191,20 +191,20 @@ def job_receiver():
     logger.debug(f"Our {djh_adjusted_webhook_queue_name} queue workers = {djh_queue_worker_count}")
     stats_client.gauge('webhook.workers.available', djh_queue_worker_count)
     if djh_queue_worker_count < 1:
-        logger.critical(f'{prefixed_djh_name} has no job handler workers running!')
+        logger.critical(f'{prefixed_door43_webhook} has no job handler workers running!')
         # Go ahead and queue the job anyway for when a worker is restarted
 
     dcjh_queue_worker_count = Worker.count(queue=dcjh_queue)
     logger.debug(f"Our {dcjh_adjusted_queue_name} queue workers = {dcjh_queue_worker_count}")
     stats_client.gauge('webhook.workers.available', dcjh_queue_worker_count)
     if dcjh_queue_worker_count < 1:
-        logger.critical(f'{prefixed_dcjh_name} has no job handler workers running!')
+        logger.critical(f'{prefixed_door43_catalog} has no job handler workers running!')
         # Go ahead and queue the job anyway for when a worker is restarted
 
     response_ok_flag, response_dict = check_posted_payload(request, logger)
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
-        logger.debug(f"{prefixed_our_name} queuing good payload…")
+        logger.debug(f"{prefixed_door43_enqueue} queuing good payload…")
 
         # Check for special switch to echo production requests to dev- chain
         global echo_prodn_to_dev_flag
@@ -254,7 +254,7 @@ def job_receiver():
 
         len_djh_queue = len(djh_queue) # Update
         len_dcjh_queue = len(dcjh_queue) # Update
-        logger.info(f"{prefixed_djh_name} queued valid job to {djh_adjusted_webhook_queue_name} queue " \
+        logger.info(f"{prefixed_door43_webhook} queued valid job to {djh_adjusted_webhook_queue_name} queue " \
                     f"({len_djh_queue} jobs now " \
                         f"for {Worker.count(queue=djh_queue)} workers, " \
                     f"({len_dcjh_queue} jobs now " \
@@ -277,7 +277,7 @@ def job_receiver():
     response_dict['status'] = 'invalid'
     try: detail = request.headers['X-Gitea-Event']
     except KeyError: detail = "No X-Gitea-Event"
-    logger.error(f"{prefixed_our_name} ignored invalid '{detail}' payload; responding with {response_dict}\n")
+    logger.error(f"{prefixed_door43_enqueue} ignored invalid '{detail}' payload; responding with {response_dict}\n")
     return jsonify(response_dict), 400
 # end of job_receiver()
 
@@ -292,7 +292,7 @@ def callback_receiver():
     """
     #assert request.method == 'POST'
     stats_client.incr('callback.posts.attempted')
-    logger.info(f"CALLBACK received by {prefixed_djh_name}: {request}")
+    logger.info(f"CALLBACK received by {prefixed_door43_webhook}: {request}")
 
     # Collect (and log) some helpful information
     djh_queue = Queue(djh_adjusted_callback_queue_name, connection=redis_connection)
@@ -310,7 +310,7 @@ def callback_receiver():
     response_ok_flag, response_dict = check_posted_callback_payload(request, logger)
     # response_dict is json payload if successful, else error info
     if response_ok_flag:
-        logger.debug(f"{prefixed_our_name} queuing good callback…")
+        logger.debug(f"{prefixed_door43_enqueue} queuing good callback…")
 
         # Add our fields
         response_dict['door43_callback_retry_count'] = 0
@@ -336,7 +336,7 @@ def callback_receiver():
         len_djh_queue = len(djh_queue) # Update
         len_dcjh_queue = len(dcjh_queue) # Update
         other_callback_queue = Queue(djh_other_adjusted_callback_queue_name, connection=redis_connection)
-        logger.info(f"{prefixed_djh_name} queued valid callback job to {djh_adjusted_callback_queue_name} queue " \
+        logger.info(f"{prefixed_door43_webhook} queued valid callback job to {djh_adjusted_callback_queue_name} queue " \
                     f"({len_djh_queue} jobs now " \
                         f"for {Worker.count(queue=djh_queue)} workers, " \
                     f"({len_dcjh_queue} jobs now " \
@@ -355,7 +355,7 @@ def callback_receiver():
     #else:
     stats_client.incr('callback.posts.invalid')
     response_dict['status'] = 'invalid'
-    logger.error(f"{prefixed_our_name} ignored invalid callback payload; responding with {response_dict}\n")
+    logger.error(f"{prefixed_door43_enqueue} ignored invalid callback payload; responding with {response_dict}\n")
     return jsonify(response_dict), 400
 # end of callback_receiver()
 
