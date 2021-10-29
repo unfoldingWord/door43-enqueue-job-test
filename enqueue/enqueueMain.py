@@ -88,7 +88,7 @@ QUEUE_NAME_SUFFIX = '' # Used to switch to a different queue, e.g., '_1'
 if prefix not in ('', DEV_PREFIX):
     logger.critical(f"Unexpected prefix: '{prefix}' — expected '' or '{DEV_PREFIX}'")
 if prefix: # don't use production queue
-    djh_adjusted_queue_name = prefixed_door43_webhook + QUEUE_NAME_SUFFIX # Will become our main queue name
+    djh_adjusted_webhook_queue_name = prefixed_door43_webhook + QUEUE_NAME_SUFFIX # Will become our main queue name
     djh_adjusted_callback_queue_name = prefixed_door43_webhook + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
     djh_other_adjusted_queue_name = DJH_NAME + QUEUE_NAME_SUFFIX # The other queue name
     djh_other_adjusted_callback_queue_name = DJH_NAME + CALLBACK_SUFFIX + QUEUE_NAME_SUFFIX
