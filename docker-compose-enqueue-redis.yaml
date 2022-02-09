@@ -18,8 +18,8 @@ services:
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - GITEA_URL=${GITEA_URL}
-      - RESTRICT_GITEA_URL=${RESTRICT_GITEA_URL}
+      - DCS_URL=${DCS_URL}
+      - RESTRICT_DCS_URL=${RESTRICT_DCS_URL}
     build:
       context: ./enqueue
       dockerfile: Dockerfile-developBranch

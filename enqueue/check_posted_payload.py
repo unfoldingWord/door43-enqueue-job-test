@@ -5,10 +5,10 @@ import os
 from typing import Dict, Tuple, List, Any, Optional
 
 prefix = os.getenv('QUEUE_PREFIX', '')
-GITEA_URL = os.getenv('GITEA_URL', default='https://develop.door43.org' if prefix else 'https://git.door43.org')
+DCS_URL = os.getenv('DCS_URL', default='https://develop.door43.org' if prefix else 'https://git.door43.org')
 
-RESTRICT_GITEA_URL = os.getenv('RESTRICT_GITEA_URL', 'True').lower() in ['true', '1']
-GITEA_URL = os.getenv('GITEA_URL', 'https://git.door43.org')
+RESTRICT_DCS_URL = os.getenv('RESTRICT_DCS_URL', 'True').lower() in ['true', '1']
+DCS_URL = os.getenv('DCS_URL', 'https://git.door43.org')
 UNWANTED_REPO_OWNER_USERNAMES = (  # code repos, not "content", so don't convert—blacklisted
                                 'translationCoreApps',
                                 'unfoldingWord-box3',
@@ -33,7 +33,7 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
 
     # Check for a test ping from Nagios
     if 'User-Agent' in request.headers and 'nagios-plugins' in request.headers['User-Agent'] \
-    and 'X-Gogs-Event' in request.headers and request.headers['X-Gogs-Event'] == 'push':
+    and 'X-Gitea-Event' in request.headers and request.headers['X-Gitea-Event'] == 'push':
         return False, {'error': "This appears to be a Nagios ping for service availability testing."}
 
     # Bail if this is not from DCS
@@ -125,9 +125,9 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
 
     # Bail if the URL to the repo is invalid
     try:
-        if RESTRICT_GITEA_URL and not payload_json['repository']['html_url'].startswith(GITEA_URL):
-            logger.error(f"The repo for {event_type} at '{payload_json['repository']['html_url']}' does not belong to '{GITEA_URL}'")
-            return False, {'error': f'The repo for {event_type} does not belong to {GITEA_URL}.'}
+        if RESTRICT_DCS_URL and not payload_json['repository']['html_url'].startswith(DCS_URL):
+            logger.error(f"The repo for {event_type} at '{payload_json['repository']['html_url']}' does not belong to '{DCS_URL}'")
+            return False, {'error': f'The repo for {event_type} does not belong to {DCS_URL}.'}
     except KeyError:
         logger.error("No repo URL specified")
         return False, {'error': f"No repo URL specified for {event_type}."}
