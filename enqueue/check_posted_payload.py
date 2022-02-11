@@ -8,7 +8,7 @@ prefix = os.getenv('QUEUE_PREFIX', '')
 DCS_URL = os.getenv('DCS_URL', default='https://develop.door43.org' if prefix else 'https://git.door43.org')
 
 RESTRICT_DCS_URL = os.getenv('RESTRICT_DCS_URL', 'True').lower() in ['true', '1']
-DCS_URL = os.getenv('DCS_URL', 'https://git.door43.org')
+DCS_URL = os.getenv('DCS_URL', 'https://git.door43.org' if not prefix else 'https://develop.door43.org')
 UNWANTED_REPO_OWNER_USERNAMES = (  # code repos, not "content", so don't convert—blacklisted
                                 'translationCoreApps',
                                 'unfoldingWord-box3',
