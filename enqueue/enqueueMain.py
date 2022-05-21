@@ -129,7 +129,7 @@ if prefix:
 # Not sure that we need this Flask logging
 # app.logger.addHandler(watchtower_log_handler)
 # logging.getLogger('werkzeug').addHandler(watchtower_log_handler)
-logger.info(f"{prefixed_door43_webhook}, callback and {prefixed_door43_catalog} are up and ready to go")
+logger.info(f"{djh_adjusted_webhook_queue_name}, {djh_adjusted_callback_queue_name} and {dcjh_adjusted_queue_name} are up and ready to go")
 
 
 def handle_failed_queue(queue_name:str) -> int:
