@@ -26,7 +26,6 @@ jobs:
         id: vars
         shell: bash
         run: |
-          DOCKER_PLATFORMS=linux/amd64
           # Be default, we use the branch or tag name as the Docker tag
           DOCKER_FILE=Dockerfile-masterBranch
           if [[ "${GITHUB_REF}"" =~ refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+[a-z]* ]]; then
