@@ -28,18 +28,19 @@ jobs:
         run: |
           REF=`echo ${GITHUB_REF} | cut -d "/" -f3-`
           echo "REF=${REF}"
-          DOCKER_FILE=Dockerfile-masterBranch
+          DOCKER_TAGS=$REF
           if [[ "${GITHUB_REF}" =~ refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+[a-z]* ]]; then
             # GITHUB_REF matches refs/tags/v\d+.\d+.\d+ so its a release tag
             PATCH_VERSION=${REF#v}
             MINOR_VERSION=`echo ${PATCH_VERSION} | cut -f1,2 -d'.'`
             MAJOR_VERSION=`echo ${MINOR_VERSION} | cut -f1 -d'.'`
             DOCKER_TAGS="latest,${MAJOR_VERSION},${MINOR_VERSION},${PATCH_VERSION}"
+            DOCKER_FILE=Dockerfile-masterBranch
           elif [[ "${GITHUB_REF}" =~ refs\/heads\/release\/v[0-9]+\.[0-9]+ ]]; then
             # REF is a release branch so is a beta, qa or latest of this minor version
             DOCKER_TAGS="latest-qa"
+            DOCKER_FILE=Dockerfile-masterBranch
           elif [[ "${GITHUB_REF}" =~ refs\/heads\/(master|develop) ]]; then
-            DOCKER_TAGS=$REF
             DOCKER_FILE="Dockerfile-${REF}Branch"
           fi
           echo "SETTING DOCKER_TAGS: ${DOCKER_TAGS}"
