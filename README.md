@@ -1,4 +1,5 @@
 master:
+G
 [![Build Status](https://travis-ci.org/unfoldingWord-dev/door43-enqueue-job.svg?branch=master)](https://travis-ci.org/unfoldingWord-dev/door43-enqueue-job?branch=master)
 [![Coverage Status](https://coveralls.io/repos/github/unfoldingWord-dev/door43-enqueue-job/badge.svg?branch=master)](https://coveralls.io/github/unfoldingWord-dev/door43-enqueue-job?branch=master)
 
