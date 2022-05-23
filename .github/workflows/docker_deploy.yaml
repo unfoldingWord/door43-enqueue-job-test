@@ -40,7 +40,7 @@ jobs:
             DOCKER_TAGS="latest-qa"
           elif [[ "${GITHUB_REF}" =~ refs\/heads\/(master|develop) ]]; then
             DOCKER_TAGS=$REF
-            DOCKER_FILE="Dockerfile-${REF}branch"
+            DOCKER_FILE="Dockerfile-${REF}Branch"
           fi
           echo "SETTING DOCKER_TAGS: ${DOCKER_TAGS}"
           echo "DOCKER_TAGS=${DOCKER_TAGS}" >> $GITHUB_ENV
