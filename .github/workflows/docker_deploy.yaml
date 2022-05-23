@@ -27,7 +27,8 @@ jobs:
         shell: bash
         run: |
           DOCKER_FILE=Dockerfile-masterBranch
-          if [[ "${GITHUB_REF}"" =~ refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+[a-z]* ]]; then
+          if [[ "${GITHUB_REF}" =~ refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+[a-z]* ]]; then
+            echo "HERE1"
             # GITHUB_REF matches refs/tags/v\d+.\d+.\d+ so its a release tag
             TAG=`echo ${GITHUB_REF} | cut -d "/" -f3-`
             echo "TAG=${TAG}"
@@ -37,12 +38,17 @@ jobs:
             DOCKER_TAGS="latest,${MAJOR_VERSION},${MINOR_VERSION},${PATCH_VERSION}"
           elif [[ "${GITHUB_REF}" =~ refs\/heads\/release\/v[0-9]+\.[0-9]+ ]]; then
             # REF is a release branch so is a beta, qa or latest of this minor version
+            echo "HERE2"
             DOCKER_TAGS="latest-qa"
           elif [[ "${GITHUB_REF}" =~ refs\/heads\/develop ]]; then
+            echo "HERE3"
             DOCKER_FILE=Dockerfile-developBranch
             DOCKER_TAGS="develop"
           elif [[ "${GITHUB_REF}" =~ refs\/heads\/master ]]; then
+            echo "HERE4"
             DOCKER_TAGS="master"
+          else
+            echo "HERE5"
           fi
           echo "SETTING DOCKER_TAGS: ${DOCKER_TAGS}"
           echo "DOCKER_TAGS=${DOCKER_TAGS}" >> $GITHUB_ENV
