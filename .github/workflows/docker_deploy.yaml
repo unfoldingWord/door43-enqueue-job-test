@@ -2,12 +2,10 @@ name: Deploy image to Docker
 
 on:
   push:
-    paths-ignore:
-      - 'README.md'  
     branches:
       - master
       - develop
-      - 'release/v**'
+      - release/**
   release:
     types: [published]
 
