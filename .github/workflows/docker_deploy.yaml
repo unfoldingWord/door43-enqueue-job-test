@@ -3,9 +3,9 @@ name: Deploy image to Docker
 on:
   push:
     branches:
-      - 'release/v**'
       - master
       - develop
+      - release/**
   release:
     types: [published]
 
