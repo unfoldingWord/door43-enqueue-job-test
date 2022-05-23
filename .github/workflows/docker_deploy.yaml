@@ -42,7 +42,7 @@ jobs:
             PATCH_VERSION=${PATCH_VERSION%-dcs}
             MINOR_VERSION=`echo ${PATCH_VERSION} | cut -f1,2 -d'.'`
             MAJOR_VERSION=`echo ${MINOR_VERSION} | cut -f1 -d'.'`
-            DOCKER_TAGS="${DOCKER_TAGS},latest,{MAJOR_VERSION},${MINOR_VERSION},${PATCH_VERSION}"
+            DOCKER_TAGS="${DOCKER_TAGS},latest,${MAJOR_VERSION},${MINOR_VERSION},${PATCH_VERSION}"
           elif [[ "${REF}" == "release/"* ]]; then
             # REF is a release branch so is a beta, qa or latest of this minor version
             DOCKER_TAGS="${DOCKER_TAGS},latest-qa"
