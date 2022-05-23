@@ -8,8 +8,6 @@ on:
       - master
       - develop
       - release/v*
-    tags:
-      - v*
   release:
     types: [published]
 
