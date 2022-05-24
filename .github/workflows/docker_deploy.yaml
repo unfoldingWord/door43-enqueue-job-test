@@ -28,7 +28,7 @@ jobs:
           echo "REF=${REF}"
           DOCKER_TAGS=$REF
           DOCKER_FILE=Dockerfile-masterBranch
-          if [[ "${GITHUB_REF}" =~ refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+[a-z]* ]]; then
+          if [[ "${GITHUB_REF}" =~ refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+[a-z]* ]]; then
             # GITHUB_REF matches refs/tags/v\d+.\d+.\d+ so its a release tag
             PATCH_VERSION=${REF#v}
             MINOR_VERSION=`echo ${PATCH_VERSION} | cut -f1,2 -d'.'`
