@@ -1,10 +1,14 @@
 # This code adapted by RJH June 2018 from tx-manager/client_webhook/ClientWebhookHandler
 #   Updated Sept 2018 to add callback check
 
+import os
 from typing import Dict, Tuple, List, Any, Optional
 
+prefix = os.getenv('QUEUE_PREFIX', '')
+DCS_URL = os.getenv('DCS_URL', default='https://develop.door43.org' if prefix else 'https://git.door43.org')
 
-GITEA_URL = 'https://git.door43.org'
+RESTRICT_DCS_URL = os.getenv('RESTRICT_DCS_URL', 'True').lower() in ['true', '1']
+DCS_URL = os.getenv('DCS_URL', 'https://git.door43.org' if not prefix else 'https://develop.door43.org')
 UNWANTED_REPO_OWNER_USERNAMES = (  # code repos, not "content", so don't convert—blacklisted
                                 'translationCoreApps',
                                 'unfoldingWord-box3',
@@ -29,7 +33,7 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
 
     # Check for a test ping from Nagios
     if 'User-Agent' in request.headers and 'nagios-plugins' in request.headers['User-Agent'] \
-    and 'X-Gogs-Event' in request.headers and request.headers['X-Gogs-Event'] == 'push':
+    and 'X-Gitea-Event' in request.headers and request.headers['X-Gitea-Event'] == 'push':
         return False, {'error': "This appears to be a Nagios ping for service availability testing."}
 
     # Bail if this is not from DCS
@@ -81,6 +85,17 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
             logger.info(f"Ignoring {event_type} for black-listed \"non-content\" '{unwanted_repo_username}' repo: {repo_name}") # Shows in prodn logs
             return False, {'error': f'This {event_type} appears to be for a "non-content" (program code?) repo.'}
 
+
+    # Bail if the repo is private
+    try:
+        private_flag = payload_json['repository']['private']
+    except (KeyError, AttributeError):
+        private_flag = 'MISSING'
+    if private_flag != False:
+        logger.error(f"The repo for {event_type} is not public: got {private_flag}")
+        return False, {'error': f'The repo for {event_type} is not public.'}
+
+
     commit_messages:List[str] = []
     commit_message:Optional[str]
     try:
@@ -110,9 +125,9 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
 
     # Bail if the URL to the repo is invalid
     try:
-        if not payload_json['repository']['html_url'].startswith(GITEA_URL):
-            logger.error(f"The repo for {event_type} at '{payload_json['repository']['html_url']}' does not belong to '{GITEA_URL}'")
-            return False, {'error': f'The repo for {event_type} does not belong to {GITEA_URL}.'}
+        if RESTRICT_DCS_URL and not payload_json['repository']['html_url'].startswith(DCS_URL):
+            logger.error(f"The repo for {event_type} at '{payload_json['repository']['html_url']}' does not belong to '{DCS_URL}'")
+            return False, {'error': f'The repo for {event_type} does not belong to {DCS_URL}.'}
     except KeyError:
         logger.error("No repo URL specified")
         return False, {'error': f"No repo URL specified for {event_type}."}
@@ -120,10 +135,12 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
 
     if event_type == 'push':
         # Bail if this is not an actual commit
-        # NOTE: What are these notifications??? 'before' and 'after' have the same commit id
+        # NOTE: What are these notifications??? 'before' and 'after' have the same commit id 
         #   Even test/fake deliveries usually have a commit specified (even if after==before)
+        #   RESPONSE: This is not always true! A new branch creates a push that has no before commit ID (just 0000000000000000000000000000000000000000)
+        #             Going to allow a build if before/after do not match - RHM
         try:
-            if not payload_json['commits']:
+            if not payload_json['commits'] and payload_json['before'] == payload_json['after']:
                 logger.error("No commits found for push")
                 try: # Just display BEFORE & AFTER for interest if they exist
                     logger.debug(f"BEFORE is {payload_json['before']}")
