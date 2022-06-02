@@ -56,7 +56,7 @@ CALLBACK_TIMEOUT = '1200s' if prefix else '600s' # Then a running callback job (
 # Get the redis URL from the environment, otherwise use a local test instance
 redis_hostname = getenv('REDIS_HOSTNAME', 'redis')
 # Use this to detect test mode (coz logs will go into a separate AWS CloudWatch stream)
-debug_mode_flag = getenv('DEBUG_MODE', False)
+debug_mode_flag = getenv('DEBUG_MODE', 'False').lower() not in ('false', '0', 'f', '')
 test_string = " (TEST)" if debug_mode_flag else ""
 
 
@@ -66,8 +66,9 @@ sh = logging.StreamHandler(sys.stdout)
 sh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s: %(message)s'))
 logger.addHandler(sh)
 aws_access_key_id = environ['AWS_ACCESS_KEY_ID']
+aws_secret_access_key = environ['AWS_SECRET_ACCESS_KEY']
 boto3_client = boto3.client("logs", aws_access_key_id=aws_access_key_id,
-                        aws_secret_access_key=environ['AWS_SECRET_ACCESS_KEY'],
+                        aws_secret_access_key=aws_secret_access_key,
                         region_name='us-west-2')
 test_mode_flag = getenv('TEST_MODE', '')
 travis_flag = getenv('TRAVIS_BRANCH', '')
@@ -179,27 +180,27 @@ def job_receiver():
 
     # Collect and log some helpful information
     len_djh_queue = len(djh_queue) # Should normally sit at zero here
-    stats_client.gauge('webhook.queue.length.current', len_djh_queue)
+    stats_client.gauge('door43_job_handler.queue.length.current', len_djh_queue)
     len_djh_failed_queue = handle_failed_queue(djh_adjusted_webhook_queue_name)
-    stats_client.gauge('webhook.queue.length.failed', len_djh_failed_queue)
+    stats_client.gauge('door43_job_handler.queue.length.failed', len_djh_failed_queue)
     len_dcjh_queue = len(dcjh_queue) # Should normally sit at zero here
-    stats_client.gauge('webhook.queue.length.current', len_dcjh_queue)
+    stats_client.gauge('door43_catalog_job_handler.queue.length.current', len_dcjh_queue)
     len_dcjh_failed_queue = handle_failed_queue(dcjh_adjusted_queue_name)
-    stats_client.gauge('webhook.queue.length.failed', len_dcjh_failed_queue)
+    stats_client.gauge('door43_catalog_ob_handler.queue.length.failed', len_dcjh_failed_queue)
 
     # Find out how many workers we have
     total_worker_count = Worker.count(connection=redis_connection)
     logger.debug(f"Total rq workers = {total_worker_count}")
     djh_queue_worker_count = Worker.count(queue=djh_queue)
     logger.debug(f"Our {djh_adjusted_webhook_queue_name} queue workers = {djh_queue_worker_count}")
-    stats_client.gauge('webhook.workers.available', djh_queue_worker_count)
+    stats_client.gauge('door43_job_handler.workers.available', djh_queue_worker_count)
     if djh_queue_worker_count < 1:
         logger.critical(f"{prefixed_door43_webhook} has no job handler workers running!")
         # Go ahead and queue the job anyway for when a worker is restarted
 
     dcjh_queue_worker_count = Worker.count(queue=dcjh_queue)
     logger.debug(f"Our {dcjh_adjusted_queue_name} queue workers = {dcjh_queue_worker_count}")
-    stats_client.gauge('webhook.workers.available', dcjh_queue_worker_count)
+    stats_client.gauge('door43_catalog_job_handler.workers.available', dcjh_queue_worker_count)
     if dcjh_queue_worker_count < 1:
         logger.critical(f"{prefixed_door43_catalog} has no job handler workers running!")
         # Go ahead and queue the job anyway for when a worker is restarted
@@ -278,8 +279,10 @@ def job_receiver():
     #else:
     stats_client.incr('webhook.posts.invalid')
     response_dict['status'] = 'invalid'
-    try: detail = request.headers['X-Gitea-Event']
-    except KeyError: detail = "No X-Gitea-Event"
+    try:
+        detail = request.headers['X-Gitea-Event']
+    except KeyError:
+        detail = "No X-Gitea-Event"
     logger.error(f"{prefixed_door43_enqueue} ignored invalid '{detail}' payload; responding with {response_dict}\n")
     return jsonify(response_dict), 400
 # end of job_receiver()
