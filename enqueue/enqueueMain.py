@@ -31,8 +31,6 @@ LOGGING_NAME = 'Door43_Enqueue' # Used for logging
 DOOR43_JOB_HANDLER_QUEUE_NAME = 'door43_job_handler' # The main queue name for generating HTML, PDF, etc. files (and graphite name) -- MUST match setup.py in door43-job-handler. Will get prefixed for dev
 DOOR43_CATALOG_JOB_HANDLER_QUEUE_NAME = 'door43_catalog_job_handler' # The catalog backport queue name -- MUST match setup.py in door43-catalog-job-handler. Will get prefixed for devCALLBACK_SUFFIX = '_callback' # The callback prefix for the DJH_NAME to handle deploy files
 DOOR43_JOB_HANDLER_CALLBACK_QUEUE_NAME = 'door43_job_handler_callback'
-DOOR43_OTHER_QUEUE_NAME = 'door43_other'
-DOOR43_OTHER_CALLBACK_QUEUE_NAME = 'door43_other_callback'
 
 # NOTE: The following strings if not empty, MUST have a trailing slash but NOT a leading one.
 #WEBHOOK_URL_SEGMENT = 'client/webhook/'
@@ -95,14 +93,10 @@ if PREFIX not in ('', DEV_PREFIX):
 if PREFIX: # don't use production queue
     djh_adjusted_webhook_queue_name = PREFIXED_DOOR43_JOB_HANDLER_QUEUE_NAME + QUEUE_NAME_SUFFIX # Will become our main queue name
     djh_adjusted_callback_queue_name = PREFIXED_DOOR43_JOB_HANDLER_CALLBACK_QUEUE_NAME + QUEUE_NAME_SUFFIX
-    djh_other_adjusted_queue_name = PREFIXED_DOOR43_OTHER + QUEUE_NAME_SUFFIX # The other queue name
-    djh_other_adjusted_callback_queue_name = prefixed_door43_other_callback + QUEUE_NAME_SUFFIX
     dcjh_adjusted_queue_name = PREFIXED_DOOR43_CATALOG_JOB_HANDLER_QUEUE_NAME + QUEUE_NAME_SUFFIX # Will become the catalog handler queue name
 else: # production code
     djh_adjusted_webhook_queue_name = DOOR43_JOB_HANDLER_QUEUE_NAME + QUEUE_NAME_SUFFIX # Will become our main queue name
     djh_adjusted_callback_queue_name = DOOR43_JOB_HANDLER_CALLBACK_QUEUE_NAME + QUEUE_NAME_SUFFIX
-    djh_other_adjusted_queue_name = DEV_PREFIX + djh_adjusted_webhook_queue_name # The other queue name
-    djh_other_adjusted_callback_queue_name = DEV_PREFIX + djh_adjusted_callback_queue_name
     dcjh_adjusted_queue_name = DOOR43_CATALOG_JOB_HANDLER_QUEUE_NAME + QUEUE_NAME_SUFFIX # Will become the catalog handler queue name
 # NOTE: The prefixed version must also listen at a different port (specified in gunicorn run command)
 
@@ -242,23 +236,6 @@ def job_receiver():
         dcjh_queue.enqueue('webhook.job', response_dict, job_timeout=WEBHOOK_TIMEOUT) # A function named webhook.job will be called by the worker
         # NOTE: The above line can return a result from the webhook.job function. (By default, the result remains available for 500s.)
 
-        # See if we want to echo this job to the dev- queue (used for dev- code testing)
-        other_queue = Queue(djh_other_adjusted_queue_name, connection=redis_connection)
-        if echo_prodn_to_dev_flag: # Should only be set on production chain (so repo_name should be set)
-            if repo_name == 'acceptance_test/test':
-                logger.info(f"Not echoing '{repo_name}' to {djh_other_adjusted_queue_name} queue.")
-            else: # for all others
-                logger.info(f"ALSO ECHOING JOB to {djh_other_adjusted_queue_name} queue…")
-                logger.info("  (Use https://git.door43.org/tx-manager-test-data/echo_prodn_to_dev_off/settings/hooks/44079 to turn this off.)")
-                response_dict['echoed_from_production'] = True
-                other_queue.enqueue('webhook.job', response_dict, job_timeout=WEBHOOK_TIMEOUT) # A function named webhook.job will be called by the worker
-
-        # Find out who our workers are
-        #workers = Worker.all(connection=redis_connection) # Returns the actual worker objects
-        #logger.debug(f"Total rq workers ({len(workers)}): {workers}")
-        #djh_queue_workers = Worker.all(queue=djh_queue)
-        #logger.debug(f"Our {djh_adjusted_webhook_queue_name} queue workers ({len(djh_queue_workers)}): {djh_queue_workers}")
-
         len_djh_queue = len(djh_queue) # Update
         len_dcjh_queue = len(dcjh_queue) # Update
         logger.info(f"{PREFIXED_DOOR43_JOB_HANDLER_QUEUE_NAME} queued valid job to {djh_adjusted_webhook_queue_name} queue " \
@@ -266,8 +243,6 @@ def job_receiver():
                         f"for {Worker.count(queue=djh_queue)} workers, " \
                     f"({len_dcjh_queue} jobs now " \
                         f"for {Worker.count(queue=dcjh_queue)} workers, " \
-                    f"{len(other_queue)} jobs in {djh_other_adjusted_queue_name} queue " \
-                        f"for {Worker.count(queue=other_queue)} workers, " \
                     f"{len_djh_failed_queue} failed jobs) at {datetime.utcnow()}, " \
                     f"{len_dcjh_failed_queue} failed jobs) at {datetime.utcnow()}\n")
 
@@ -275,8 +250,6 @@ def job_receiver():
                                'status': 'queued',
                                'queue_name': djh_adjusted_webhook_queue_name,
                                'door43_job_queued_at': datetime.utcnow()}
-        if echo_prodn_to_dev_flag:
-            webhook_return_dict['echoed_queue_name'] = djh_other_adjusted_queue_name
         stats_client.incr('webhook.posts.succeeded')
         return jsonify(webhook_return_dict)
     #else:
@@ -344,14 +317,11 @@ def callback_receiver():
 
         len_djh_queue = len(djh_queue) # Update
         len_dcjh_queue = len(dcjh_queue) # Update
-        other_callback_queue = Queue(djh_other_adjusted_callback_queue_name, connection=redis_connection)
         logger.info(f"{PREFIXED_DOOR43_JOB_HANDLER_QUEUE_NAME} queued valid callback job to {djh_adjusted_callback_queue_name} queue " \
                     f"({len_djh_queue} jobs now " \
                         f"for {Worker.count(queue=djh_queue)} workers, " \
                     f"({len_dcjh_queue} jobs now " \
                         f"for {Worker.count(queue=dcjh_queue)} workers, " \
-                    f"{len(other_callback_queue)} jobs in {djh_other_adjusted_callback_queue_name} queue " \
-                        f"for {Worker.count(queue=other_callback_queue)} workers, " \
                     f"{len_djh_failed_queue} failed jobs) at {datetime.utcnow()}, " \
                     f"{len_dcjh_failed_queue} failed jobs) at {datetime.utcnow()}\n")
 
