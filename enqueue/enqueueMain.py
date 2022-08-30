@@ -9,15 +9,16 @@ from os import getenv, environ
 import sys
 from datetime import datetime, timedelta
 import logging
+import boto3
+import watchtower
 
 # Library (PyPI) imports
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 # NOTE: We use StrictRedis() because we don't need the backwards compatibility of Redis()
 from redis import StrictRedis
 from rq import Queue, Worker
 from statsd import StatsClient # Graphite front-end
-from boto3 import Session
-from watchtower import CloudWatchLogHandler
 
 
 # Local imports
@@ -65,7 +66,7 @@ sh = logging.StreamHandler(sys.stdout)
 sh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s: %(message)s'))
 logger.addHandler(sh)
 aws_access_key_id = environ['AWS_ACCESS_KEY_ID']
-boto3_session = Session(aws_access_key_id=aws_access_key_id,
+boto3_client = boto3.client("logs", aws_access_key_id=aws_access_key_id,
                         aws_secret_access_key=environ['AWS_SECRET_ACCESS_KEY'],
                         region_name='us-west-2')
 test_mode_flag = getenv('TEST_MODE', '')
@@ -74,8 +75,8 @@ log_group_name = f"{'' if test_mode_flag or travis_flag else prefix}tX" \
                  f"{'_DEBUG' if debug_mode_flag else ''}" \
                  f"{'_TEST' if test_mode_flag else ''}" \
                  f"{'_TravisCI' if travis_flag else ''}"
-watchtower_log_handler = CloudWatchLogHandler(boto3_session=boto3_session,
-                                                log_group=log_group_name,
+watchtower_log_handler = watchtower.CloudWatchLogHandler(boto3_client=boto3_client,
+                                                log_group_name=log_group_name,
                                                 stream_name=prefixed_door43_enqueue)
 logger.addHandler(watchtower_log_handler)
 logger.debug(f"Logging to AWS CloudWatch group '{log_group_name}' using key '…{aws_access_key_id[-2:]}'.")
@@ -123,6 +124,8 @@ stats_client = StatsClient(host=graphite_url, port=8125, prefix=stats_prefix)
 
 
 app = Flask(__name__)
+if prefix:
+    CORS(app, resources={r"/*": {"origins": "*", "allow_headers": "*", "expose_headers": "*"}})
 # Not sure that we need this Flask logging
 # app.logger.addHandler(watchtower_log_handler)
 # logging.getLogger('werkzeug').addHandler(watchtower_log_handler)
@@ -191,14 +194,14 @@ def job_receiver():
     logger.debug(f"Our {djh_adjusted_webhook_queue_name} queue workers = {djh_queue_worker_count}")
     stats_client.gauge('webhook.workers.available', djh_queue_worker_count)
     if djh_queue_worker_count < 1:
-        logger.critical(f'{prefixed_door43_webhook} has no job handler workers running!')
+        logger.critical(f"{prefixed_door43_webhook} has no job handler workers running!")
         # Go ahead and queue the job anyway for when a worker is restarted
 
     dcjh_queue_worker_count = Worker.count(queue=dcjh_queue)
     logger.debug(f"Our {dcjh_adjusted_queue_name} queue workers = {dcjh_queue_worker_count}")
     stats_client.gauge('webhook.workers.available', dcjh_queue_worker_count)
     if dcjh_queue_worker_count < 1:
-        logger.critical(f'{prefixed_door43_catalog} has no job handler workers running!')
+        logger.critical(f"{prefixed_door43_catalog} has no job handler workers running!")
         # Go ahead and queue the job anyway for when a worker is restarted
 
     response_ok_flag, response_dict = check_posted_payload(request, logger)

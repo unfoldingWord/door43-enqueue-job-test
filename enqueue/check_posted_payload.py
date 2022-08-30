@@ -53,13 +53,94 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
     #     logger.debug(f"  {payload_key}: {payload_entry!r}")
 
     # Bail if this is not a push, release (tag), or delete (branch) event
-    #   Others include 'create', 'issue_comment', 'issues', 'pull_request', 'fork'
-    if event_type not in ('push', 'release', 'delete', 'fork'):
-        logger.error(f"X-Gitea-Event '{event_type}' is not a push, release (tag), or delete (branch)")
+    #   Others include 'create', 'pull_request', 'fork'
+    valid_events = {
+        "repository": [
+            {
+                "payload_key": "action",
+                "payload_value": "created",
+                "verbage": "created a repository"
+            },
+            {
+                "payload_key": "action",
+                "payload_value": "deleted",
+                "verbage": "deleted a repository"
+            },
+        ],
+        "push": [
+            {
+                "payload_key": "after",
+                "payload_value": None,
+                "verbage": "push commits",
+            },
+        ],
+        "delete": [
+            {
+                "payload_key": "ref_type",
+                "payload_value": "branch",
+                "verbage": "deleted a branch",
+            },
+            {
+                "payload_key": "ref_type",
+                "payload_value": "tag",
+                "verbage": "deleted a tag",
+            },
+        ],
+        "fork": [
+            {
+                "payload_key": "forkee",
+                "payload_value": None,
+                "verbage": "forked the repo"
+            },
+        ],
+        "release": [
+            {
+                "payload_key": "action",
+                "payload_value": "published",
+                "verbage": "published a release"
+            },
+            {
+                "payload_key": "action",
+                "payload_value": "updated",
+                "verbage": "updated a release"
+            },
+            {
+                "payload_key": "action",
+                "payload_value": "deleted",
+                "verbage": "deleted a release"
+            },
+        ],
+        "pdf_request": [
+            {
+                "payload_key": "after",
+                "payload_value": None,
+                "verbage": "generate a PDF"
+            }
+        ],
+    }
+    if event_type not in valid_events:
+        message = f"X-Gitea-Event '{event_type}' must be an event of type: {', '.join(valid_events.keys)}"
+        logger.error(message)
         logger.info(f"Ignoring '{event_type}' payload: {payload_json}") # Also shows in prodn logs
-        return False, {'error': "This does not appear to be a push, release, fork, or delete."}
-    our_event_verb = {'push':'pushed', 'release':'released',
-                        'delete':'deleted', 'fork':'forked'}[event_type]
+        return False, {'error': message}
+    my_event = None
+    payload_keys = []
+    payload_values = []
+    for event in valid_events[event_type]:
+        payload_keys.append(event["payload_key"])
+        if "payload_value" in event and event["payload_value"]:
+            payload_values.append(event["payload_value"])
+        if event["payload_key"] in payload_json and (event["payload_value"] == None or event["payload_value"] == payload_json[event["payload_key"]]):
+            my_event = event
+            break
+    if not my_event:
+        message = f"X-Gitea-Event '{event_type}' must have the following properties: {', '.join(payload_keys)}"
+        if len(payload_values) > 0:
+            message += f" and the following values: {', '.join(payload_values)}"
+        logger.error(message)
+        logger.info(f"Ignoring '{event_type}' payload: {payload_json}") # Also shows in prodn logs
+        return False, {'error': message}
+    our_event_verbage = my_event["verbage"]
 
     # Give a brief but helpful info message for the logs
     try:
@@ -114,14 +195,13 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
     except (KeyError, AttributeError):
         extra_info = ""
     if pusher_username:
-        logger.info(f"'{pusher_username}' {our_event_verb} '{repo_name}'{extra_info}")
+        logger.info(f"'{pusher_username}' {our_event_verbage} '{repo_name}'{extra_info}")
     elif sender_username:
-        logger.info(f"'{sender_username}' {our_event_verb} '{repo_name}'{extra_info}")
+        logger.info(f"'{sender_username}' {our_event_verbage} '{repo_name}'{extra_info}")
     elif repo_name:
-        logger.info(f"UNKNOWN {our_event_verb} '{repo_name}'{extra_info}")
+        logger.info(f"UNKNOWN {our_event_verbage} '{repo_name}'{extra_info}")
     else: # they were all None
-        logger.info(f"No pusher/sender/repo name in {event_type} payload: {payload_json}")
-
+        logger.info(f"No pusher/sender/repo name in {event_type} ({our_event_verbage}); payload: {payload_json}")
 
     # Bail if the URL to the repo is invalid
     try:
@@ -131,7 +211,6 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
     except KeyError:
         logger.error("No repo URL specified")
         return False, {'error': f"No repo URL specified for {event_type}."}
-
 
     if event_type == 'push':
         # Bail if this is not an actual commit
@@ -152,18 +231,12 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
             logger.error("No commits specified for push")
             return False, {'error': "No commits specified for push."}
 
-
     if 'action' in payload_json:
         logger.info(f"This {event_type} has ACTION='{payload_json['action']}'")
     if 'release' in payload_json:
         if 'draft' in payload_json['release'] and payload_json['release']['draft']:
             logger.error(f"This release appears to be a DRAFT {event_type}")
             return False, {'error': f"Preview {event_type} pages don't get built for drafts."}
-        # NOTE: The following seems to prevent real releases from being built !!!
-        # if 'target_commitish' in payload_json['release']:
-        #     logger.error(f"This {event_type} has release target_commitish='{payload_json['release']['target_commitish']}'")
-        #     return False, {'error': f"Preview {event_type} pages don't get built with target_commitish='{payload_json['release']['target_commitish']}'."}
-
 
     # Add the event to the payload to be passed on
     payload_json['DCS_event'] = event_type
@@ -171,7 +244,6 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
     logger.debug(f"Door43 payload for {event_type} seems ok")
     return True, payload_json
 # end of check_posted_payload
-
 
 
 def check_posted_callback_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
