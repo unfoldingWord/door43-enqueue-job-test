@@ -119,6 +119,7 @@ graphite_url = getenv('GRAPHITE_HOSTNAME', 'localhost')
 logger.info(f"graphite_url is '{graphite_url}'")
 stats_prefix = f"door43.{'dev' if PREFIX else 'prod'}"
 enqueue_job_stats_prefix = f"{stats_prefix}.enqueue-job"
+enqueue_callback_job_stats_prefix = f"{stats_prefix}.enqueue-callback-job"
 enqueue_catalog_job_stats_prefix = f"{stats_prefix}.enqueue-catalog-job"
 stats_client = StatsClient(host=graphite_url, port=8125)
 
@@ -170,7 +171,7 @@ def job_receiver():
     Queue name is djh_adjusted_webhook_queue_name and dcjh_adjusted_queue_name(may have been prefixed).
     """
     #assert request.method == 'POST'
-    stats_client.incr(f'{enqueue_job_stats_prefix}.webhook.posts.attempted')
+    stats_client.incr(f'{enqueue_job_stats_prefix}.posts.attempted')
     logger.info(f"WEBHOOK received by {PREFIXED_LOGGING_NAME}: {request}")
     # NOTE: 'request' above typically displays something like "<Request 'http://git.door43.org/' [POST]>"
 
@@ -219,12 +220,12 @@ def job_receiver():
             if repo_name == 'tx-manager-test-data/echo_prodn_to_dev_on':
                 echo_prodn_to_dev_flag = True
                 logger.info("TURNED ON 'echo_prodn_to_dev_flag'!\n")
-                stats_client.incr(f'{enqueue_job_stats_prefix}.webhook.posts.succeeded')
+                stats_client.incr(f'{enqueue_job_stats_prefix}.posts.succeeded')
                 return jsonify({'success': True, 'status': 'echo ON'})
             if repo_name == 'tx-manager-test-data/echo_prodn_to_dev_off':
                 echo_prodn_to_dev_flag = False
                 logger.info("Turned off 'echo_prodn_to_dev_flag'.\n")
-                stats_client.incr(f'{enqueue_job_stats_prefix}.webhook.posts.succeeded')
+                stats_client.incr(f'{enqueue_job_stats_prefix}.posts.succeeded')
                 return jsonify({'success': True, 'status': 'echo off'})
 
         # Add our fields
@@ -252,10 +253,10 @@ def job_receiver():
                                'status': 'queued',
                                'queue_name': djh_adjusted_webhook_queue_name,
                                'door43_job_queued_at': datetime.utcnow()}
-        stats_client.incr(f'{enqueue_job_stats_prefix}.webhook.posts.succeeded')
+        stats_client.incr(f'{enqueue_job_stats_prefix}.posts.succeeded')
         return jsonify(webhook_return_dict)
     #else:
-    stats_client.incr(f'{enqueue_job_stats_prefix}.webhook.posts.invalid')
+    stats_client.incr(f'{enqueue_job_stats_prefix}.posts.invalid')
     response_dict['status'] = 'invalid'
     try:
         detail = request.headers['X-Gitea-Event']
@@ -275,15 +276,18 @@ def callback_receiver():
     Queue name is djh_adjusted_callback_queue_name (may have been prefixed).
     """
     #assert request.method == 'POST'
-    stats_client.incr(f'{enqueue_job_stats_prefix}.callback.posts.attempted')
+    stats_client.incr(f'{enqueue_callback_job_stats_prefix}.posts.attempted')
     logger.info(f"CALLBACK received by {PREFIXED_DOOR43_JOB_HANDLER_QUEUE_NAME}: {request}")
 
     # Collect (and log) some helpful information
     djh_queue = Queue(djh_adjusted_callback_queue_name, connection=redis_connection)
     len_djh_queue = len(djh_queue) # Should normally sit at zero here
-    stats_client.gauge(f'{enqueue_job_stats_prefix}.callbacks.queue.length.current', len_djh_queue)
+    stats_client.gauge(f'{enqueue_callback_job_stats_prefix}.queue.length.current', len_djh_queue)
     len_djh_failed_queue = handle_failed_queue(djh_adjusted_callback_queue_name)
-    stats_client.gauge(f'{enqueue_job_stats_prefix}.callbacks.queue.length.failed', len_djh_failed_queue)
+    stats_client.gauge(f'{enqueue_callback_job_stats_prefix}.queue.length.failed', len_djh_failed_queue)
+    djh_queue_worker_count = Worker.count(queue=djh_queue)
+    logger.debug(f"Our {djh_adjusted_callback_queue_name} queue workers = {djh_queue_worker_count}")
+    stats_client.gauge(f'{enqueue_callback_job_stats_prefix}.workers.available', djh_queue_worker_count)
 
     response_ok_flag, response_dict = check_posted_callback_payload(request, logger)
     # response_dict is json payload if successful, else error info
@@ -321,10 +325,10 @@ def callback_receiver():
                                 'status': 'queued',
                                 'queue_name': djh_adjusted_callback_queue_name,
                                 'door43_callback_queued_at': datetime.utcnow()}
-        stats_client.incr(f'{enqueue_job_stats_prefix}.callback.posts.succeeded')
+        stats_client.incr(f'{enqueue_callback_job_stats_prefix}.posts.succeeded')
         return jsonify(callback_return_dict)
     #else:
-    stats_client.incr(f'{enqueue_job_stats_prefix}.callbacks.posts.invalid')
+    stats_client.incr(f'{enqueue_callback_job_stats_prefix}.posts.invalid')
     response_dict['status'] = 'invalid'
     logger.error(f"{PREFIXED_LOGGING_NAME} ignored invalid callback payload; responding with {response_dict}\n")
     return jsonify(response_dict), 400
