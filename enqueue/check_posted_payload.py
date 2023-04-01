@@ -119,7 +119,7 @@ def check_posted_payload(request, logger) -> Tuple[bool, Dict[str,Any]]:
         ],
     }
     if event_type not in valid_events:
-        message = f"X-Gitea-Event '{event_type}' must be an event of type: {', '.join(valid_events.keys)}"
+        message = f"X-Gitea-Event '{event_type}' must be an event of type: {', '.join(valid_events.keys())}"
         logger.error(message)
         logger.info(f"Ignoring '{event_type}' payload: {payload_json}") # Also shows in prodn logs
         return False, {'error': message}
